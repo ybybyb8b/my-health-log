@@ -26,7 +26,8 @@ import {
   Cloud,
   RefreshCw,
   History,
-  LayoutDashboard
+  LayoutDashboard,
+  Calendar
 } from 'lucide-react';
 
 // --- 基础配置 ---
@@ -40,30 +41,49 @@ const MEDICATION_METHODS = [
   { id: 'other', label: '其他', icon: <FileText className="w-4 h-4"/> },
 ];
 
+// --- iOS 安全日期转换 ---
+const safeDate = (dateInput) => {
+  if (!dateInput) return new Date();
+  if (dateInput instanceof Date) return dateInput;
+  if (typeof dateInput === 'string') {
+    if (dateInput.includes('-') && !dateInput.includes('T')) {
+        return new Date(dateInput.replace(/-/g, '/'));
+    }
+    return new Date(dateInput);
+  }
+  return new Date();
+};
+
 // --- 辅助函数 ---
 const formatDate = (isoString) => {
   if (!isoString) return '';
-  const date = new Date(isoString);
+  const date = safeDate(isoString);
+  if (isNaN(date.getTime())) return '时间错误';
   return `${date.getMonth() + 1}月${date.getDate()}日 ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
 };
 
 const formatDateOnly = (isoString) => {
   if (!isoString) return '';
-  const date = new Date(isoString);
+  const date = safeDate(isoString);
+  if (isNaN(date.getTime())) return '';
   return `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`;
 };
 
 const getDaysSince = (startDate) => {
-  const start = new Date(startDate);
+  if (!startDate) return 0;
+  const start = safeDate(startDate);
+  if (isNaN(start.getTime())) return 0;
+  
   start.setHours(0,0,0,0);
   const now = new Date();
   now.setHours(0,0,0,0);
-  const diffTime = Math.abs(now - start);
+  
+  const diffTime = now - start; 
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
   return diffDays + 1; 
 };
 
-export default function HealthLogProV7() {
+export default function App() {
   // --- State ---
   const [activeView, setActiveView] = useState('dashboard'); 
   const [viewParams, setViewParams] = useState({}); 
@@ -87,15 +107,19 @@ export default function HealthLogProV7() {
 
   // --- Effects ---
   useEffect(() => {
-    const savedLogs = localStorage.getItem('hl_logs');
-    const savedParts = localStorage.getItem('hl_custom_parts');
-    const savedCourses = localStorage.getItem('hl_courses');
-    const savedWebdav = localStorage.getItem('hl_webdav');
-    
-    if (savedLogs) setLogs(JSON.parse(savedLogs));
-    if (savedParts) setCustomParts(JSON.parse(savedParts));
-    if (savedCourses) setCourses(JSON.parse(savedCourses));
-    if (savedWebdav) setWebdavConfig(JSON.parse(savedWebdav));
+    try {
+      const savedLogs = localStorage.getItem('hl_logs');
+      const savedParts = localStorage.getItem('hl_custom_parts');
+      const savedCourses = localStorage.getItem('hl_courses');
+      const savedWebdav = localStorage.getItem('hl_webdav');
+      
+      if (savedLogs) setLogs(JSON.parse(savedLogs));
+      if (savedParts) setCustomParts(JSON.parse(savedParts));
+      if (savedCourses) setCourses(JSON.parse(savedCourses));
+      if (savedWebdav) setWebdavConfig(JSON.parse(savedWebdav));
+    } catch (e) {
+      console.error("读取缓存失败", e);
+    }
   }, []);
 
   useEffect(() => { localStorage.setItem('hl_logs', JSON.stringify(logs)); }, [logs]);
@@ -148,14 +172,6 @@ export default function HealthLogProV7() {
     }
   };
 
-  const handleAddCustomPart = (partName) => {
-    if (partName && !customParts.includes(partName) && !DEFAULT_BODY_PARTS.includes(partName)) {
-      setCustomParts([...customParts, partName]);
-      return true;
-    }
-    return false;
-  };
-
   const navigateToCourse = (courseId) => {
     setViewParams({ courseId });
     setActiveView('courseDetail');
@@ -169,7 +185,6 @@ export default function HealthLogProV7() {
     return { symptomCount: symptomLogs.length, medCount: medLogs.length };
   }, [logs]);
 
-  // --- Data & Sync ---
   const exportData = () => {
     const dataStr = JSON.stringify({ logs, customParts, courses }, null, 2);
     const blob = new Blob([dataStr], { type: "application/json" });
@@ -197,16 +212,11 @@ export default function HealthLogProV7() {
   };
 
   const handleWebDavSync = async () => {
-    if (!webdavConfig.url || !webdavConfig.username || !webdavConfig.password) {
-      alert('请先填写完整的 WebDAV 配置');
-      return;
-    }
-    alert('正在尝试同步... (如果在网页端失败，请使用 App 壳)');
+    alert('网页版受浏览器安全限制可能无法直接连接网盘。建议使用“导出备份”功能保存 JSON 文件。');
   };
 
   return (
     <div className="min-h-screen bg-gray-100/80 text-slate-800 font-sans flex flex-col max-w-lg mx-auto shadow-2xl border-x border-slate-200 relative overflow-hidden">
-      
       {/* 顶部栏 */}
       <header className="px-6 pt-12 pb-4 bg-white/80 backdrop-blur-md sticky top-0 z-20 flex justify-between items-center">
         {activeView === 'courseDetail' ? (
@@ -220,7 +230,6 @@ export default function HealthLogProV7() {
             </h1>
           </div>
         )}
-        
         <button 
           onClick={() => setActiveView(activeView === 'settings' ? 'dashboard' : 'settings')}
           className={`p-2.5 rounded-full transition-all active:scale-95 ${activeView === 'settings' ? 'bg-slate-100 text-slate-900' : 'text-slate-400 hover:bg-slate-50'}`}
@@ -329,7 +338,7 @@ export default function HealthLogProV7() {
         )}
       </main>
 
-      {/* --- 灵动岛式底部悬浮操作区 (V7 Final) --- */}
+      {/* --- 底部悬浮操作区 (V8 竖向堆叠版) --- */}
       <div className="fixed bottom-8 left-0 right-0 px-6 max-w-lg mx-auto flex items-end justify-between gap-4 pointer-events-none z-50">
          
          {/* 左侧：黑色灵动岛导航 */}
@@ -372,44 +381,55 @@ export default function HealthLogProV7() {
             </button>
          </div>
 
-         {/* 右侧：独立圆形操作按钮 (FAB) & 圆弧扇形菜单 */}
-         <div className="relative pointer-events-auto">
+         {/* 右侧：独立圆形操作按钮 (FAB) & 竖向菜单 */}
+         <div className="relative pointer-events-auto flex flex-col items-center">
             
-            {/* 圆弧扇形菜单 - 轨迹参考了时钟位置 */}
-            <div className={`absolute bottom-3 right-3 w-0 h-0 transition-all duration-300 ${isFabOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+            {/* 竖向弹出菜单 */}
+            <div className={`absolute bottom-0 w-full flex flex-col items-end gap-3 mb-[5.5rem] transition-all duration-300 ${isFabOpen ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10 pointer-events-none'}`}>
                
-               {/* 1. 红 (不适) - 约11点钟方向 (上偏左) */}
+               {/* 1. 记不适 (红) */}
                <button 
                  onClick={() => { setModalType('symptom'); setIsModalOpen(true); }}
-                 className={`absolute w-12 h-12 bg-rose-500 text-white rounded-full shadow-lg flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-95 border-2 border-[#f0f0f0] ${isFabOpen ? '-translate-y-[6rem] -translate-x-[1rem]' : 'translate-y-0 translate-x-0'}`}
-                 style={{ transitionDelay: '0ms' }}
+                 className="flex items-center gap-3 group"
                >
-                 <Activity className="w-5 h-5" />
-                 <span className="absolute right-14 bg-slate-800 text-white text-xs font-bold px-2 py-1 rounded-lg shadow-sm whitespace-nowrap opacity-0 group-hover:opacity-100">记不适</span>
+                 <span className="bg-white/90 backdrop-blur text-slate-800 text-xs font-bold px-3 py-1.5 rounded-xl shadow-sm whitespace-nowrap border border-white/20">
+                    记不适
+                 </span>
+                 <div className="w-12 h-12 bg-rose-500 text-white rounded-full shadow-lg flex items-center justify-center transition-transform active:scale-95 border-2 border-[#f0f0f0]">
+                    <Activity className="w-5 h-5" />
+                 </div>
                </button>
 
-               {/* 2. 紫 (用药) - 约10点钟方向 (左偏上) */}
+               {/* 2. 记用药 (紫) */}
                <button 
                  onClick={() => { setModalType('medication'); setIsModalOpen(true); }}
-                 className={`absolute w-12 h-12 bg-indigo-600 text-white rounded-full shadow-lg flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-95 border-2 border-[#f0f0f0] ${isFabOpen ? '-translate-y-[4.5rem] -translate-x-[4.5rem]' : 'translate-y-0 translate-x-0'}`}
-                 style={{ transitionDelay: '50ms' }}
+                 className="flex items-center gap-3 group"
                >
-                 <Pill className="w-5 h-5" />
+                 <span className="bg-white/90 backdrop-blur text-slate-800 text-xs font-bold px-3 py-1.5 rounded-xl shadow-sm whitespace-nowrap border border-white/20">
+                    记用药
+                 </span>
+                 <div className="w-12 h-12 bg-indigo-600 text-white rounded-full shadow-lg flex items-center justify-center transition-transform active:scale-95 border-2 border-[#f0f0f0]">
+                    <Pill className="w-5 h-5" />
+                 </div>
                </button>
 
-               {/* 3. 白 (病程) - 约9点钟方向 (正左偏下) */}
+               {/* 3. 新病程 (白) */}
                {!activeCourse && (
                   <button 
                     onClick={() => { setModalType('newCourse'); setIsModalOpen(true); }}
-                    className={`absolute w-12 h-12 bg-white text-slate-800 rounded-full shadow-lg flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-95 border-2 border-slate-200 ${isFabOpen ? '-translate-y-[0.5rem] -translate-x-[6.5rem]' : 'translate-y-0 translate-x-0'}`}
-                    style={{ transitionDelay: '100ms' }}
+                    className="flex items-center gap-3 group"
                   >
-                    <BookOpen className="w-5 h-5" />
+                    <span className="bg-white/90 backdrop-blur text-slate-800 text-xs font-bold px-3 py-1.5 rounded-xl shadow-sm whitespace-nowrap border border-white/20">
+                        新病程
+                    </span>
+                    <div className="w-12 h-12 bg-white text-slate-800 rounded-full shadow-lg flex items-center justify-center transition-transform active:scale-95 border-2 border-slate-200">
+                        <BookOpen className="w-5 h-5" />
+                    </div>
                   </button>
                )}
             </div>
 
-            {/* 主 FAB 按钮 - 黑色半透明背景，与左侧呼应 */}
+            {/* 主 FAB 按钮 */}
             <button 
               onClick={() => setIsFabOpen(!isFabOpen)}
               className={`w-[4.5rem] h-[4.5rem] rounded-full shadow-2xl flex items-center justify-center transition-all duration-300 z-50 relative border border-white/10 ${isFabOpen ? 'bg-[#2c2c2e] rotate-45' : 'bg-[#1c1c1e] hover:scale-105 active:scale-95'}`}
@@ -487,7 +507,7 @@ function StatsView({ logs }) {
     
     const dayMap = {};
     logs.forEach(log => {
-      const logDate = new Date(log.timestamp);
+      const logDate = safeDate(log.timestamp);
       if (logDate.getFullYear() === year && logDate.getMonth() === month) {
         const day = logDate.getDate();
         if (!dayMap[day]) dayMap[day] = { hasSymptom: false, hasMed: false };
@@ -508,8 +528,9 @@ function StatsView({ logs }) {
   }, [logs]);
 
   const changeMonth = (offset) => {
-    const newDate = new Date(currentDate.setMonth(currentDate.getMonth() + offset));
-    setCurrentDate(new Date(newDate));
+    const newDate = new Date(currentDate); 
+    newDate.setMonth(newDate.getMonth() + offset);
+    setCurrentDate(newDate);
   };
 
   return (
@@ -600,11 +621,12 @@ function CourseDetailView({ course, logs, onUpdateStatus, onDeleteLog }) {
   // Group logs by day
   const timelineData = useMemo(() => {
     const grouped = {};
-    const start = new Date(course.startDate);
+    // Use safeDate to prevent iOS crash
+    const start = safeDate(course.startDate);
     start.setHours(0,0,0,0);
 
     logs.forEach(log => {
-      const logDate = new Date(log.timestamp);
+      const logDate = safeDate(log.timestamp);
       logDate.setHours(0,0,0,0);
       const diffTime = Math.abs(logDate - start);
       const dayNum = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; 
@@ -659,7 +681,7 @@ function CourseDetailView({ course, logs, onUpdateStatus, onDeleteLog }) {
                <div className="flex items-start gap-3 pt-4 border-t border-slate-200">
                   <Stethoscope className="w-4 h-4 text-blue-500 mt-1 shrink-0" />
                   <div className="flex-1">
-                     <span className="text-xs text-slate-400 block mb-1">就诊记录 ({course.department})</span>
+                     <span className="text-xs text-slate-400 block mb-1">就诊记录 ({course.department} {course.visitDate})</span>
                      <p className="text-sm font-semibold text-slate-700">诊断：{course.diagnosis || '未填写'}</p>
                      {course.prescription && (
                        <div className="mt-3 bg-white p-3 rounded-xl border border-slate-200 text-xs text-slate-600 leading-relaxed">
@@ -681,7 +703,9 @@ function CourseDetailView({ course, logs, onUpdateStatus, onDeleteLog }) {
            <div className="bg-slate-50 p-4 rounded-2xl">
              <span className="text-slate-400 text-xs block mb-1">持续天数</span>
              <span className="font-mono text-slate-700">
-               {isRecovered ? Math.ceil((new Date(course.endDate) - new Date(course.startDate)) / (1000 * 60 * 60 * 24)) : getDaysSince(course.startDate)} 天
+               {isRecovered && course.endDate 
+                 ? Math.ceil((safeDate(course.endDate) - safeDate(course.startDate)) / (1000 * 60 * 60 * 24)) + 1 
+                 : getDaysSince(course.startDate)} 天
              </span>
            </div>
         </div>
@@ -721,6 +745,7 @@ function NewCourseForm({ onSubmit }) {
     startDate: new Date().toISOString().slice(0, 10), 
     symptoms: '',
     hasDoctorVisit: false,
+    visitDate: new Date().toISOString().slice(0, 10),
     department: '',
     diagnosis: '',
     prescription: ''
@@ -777,6 +802,15 @@ function NewCourseForm({ onSubmit }) {
 
         {data.hasDoctorVisit && (
           <div className="bg-blue-50/50 p-5 rounded-2xl space-y-4 animate-fade-in border border-blue-100">
+             <div>
+               <label className="block text-xs font-semibold text-slate-500 mb-1">就诊日期</label>
+               <input 
+                 type="date" 
+                 value={data.visitDate}
+                 onChange={(e) => setData({...data, visitDate: e.target.value})}
+                 className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm outline-none focus:border-blue-400"
+               />
+             </div>
              <div className="grid grid-cols-2 gap-3">
                <div>
                   <label className="block text-xs font-semibold text-slate-500 mb-1">就诊科室</label>
