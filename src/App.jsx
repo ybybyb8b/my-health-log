@@ -217,8 +217,8 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-gray-100/80 text-slate-800 font-sans flex flex-col max-w-lg mx-auto shadow-2xl border-x border-slate-200 relative overflow-hidden">
-      {/* 顶部栏 */}
-      <header className="px-6 pt-12 pb-4 bg-white/80 backdrop-blur-md sticky top-0 z-20 flex justify-between items-center">
+      {/* 增加了 pt-[env(safe-area-inset-top)] 自动适配刘海高度 */}
+      <header className="px-6 pt-[calc(env(safe-area-inset-top)+1.5rem)] pb-4 bg-white/80 backdrop-blur-md sticky top-0 z-20 flex justify-between items-center border-b border-slate-50">
         {activeView === 'courseDetail' ? (
            <button onClick={() => setActiveView('dashboard')} className="flex items-center gap-1 text-slate-500 hover:text-black transition-colors font-medium">
              <ChevronLeft className="w-5 h-5" /> 返回
