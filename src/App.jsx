@@ -8,7 +8,6 @@ import {
   Trash2, 
   X, 
   ChevronLeft,
-  ChevronRight,
   Droplet, 
   Pill,    
   Syringe, 
@@ -27,7 +26,8 @@ import {
   RefreshCw,
   History,
   LayoutDashboard,
-  Calendar
+  Calendar,
+  MoreHorizontal
 } from 'lucide-react';
 
 // --- 基础配置 ---
@@ -172,12 +172,21 @@ export default function App() {
     }
   };
 
+  const handleAddCustomPart = (partName) => {
+    if (partName && !customParts.includes(partName) && !DEFAULT_BODY_PARTS.includes(partName)) {
+      setCustomParts([...customParts, partName]);
+      return true;
+    }
+    return false;
+  };
+
   const navigateToCourse = (courseId) => {
     setViewParams({ courseId });
     setActiveView('courseDetail');
   };
 
-  const activeCourse = useMemo(() => courses.find(c => c.status === 'active'), [courses]);
+  // 核心修改：支持多个活跃病程
+  const activeCourses = useMemo(() => courses.filter(c => c.status === 'active'), [courses]);
 
   const stats = useMemo(() => {
     const symptomLogs = logs.filter(l => l.type === 'symptom');
@@ -217,7 +226,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-gray-100/80 text-slate-800 font-sans flex flex-col max-w-lg mx-auto shadow-2xl border-x border-slate-200 relative overflow-hidden">
-      {/* 增加了 pt-[env(safe-area-inset-top)] 自动适配刘海高度 */}
+      {/* 顶部栏 */}
       <header className="px-6 pt-[calc(env(safe-area-inset-top)+1.5rem)] pb-4 bg-white/80 backdrop-blur-md sticky top-0 z-20 flex justify-between items-center border-b border-slate-50">
         {activeView === 'courseDetail' ? (
            <button onClick={() => setActiveView('dashboard')} className="flex items-center gap-1 text-slate-500 hover:text-black transition-colors font-medium">
@@ -263,34 +272,48 @@ export default function App() {
         )}
         {activeView === 'dashboard' && (
           <div className="space-y-6 animate-fade-in">
-            {/* 当前病程卡片 */}
-            {activeCourse ? (
-              <div 
-                onClick={() => navigateToCourse(activeCourse.id)}
-                className="bg-gradient-to-br from-indigo-600 to-violet-600 rounded-[2rem] p-6 text-white shadow-xl shadow-indigo-200 cursor-pointer relative overflow-hidden group transition-transform active:scale-[0.98]"
-              >
-                <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                   <Activity className="w-32 h-32" />
-                </div>
-                <div className="flex justify-between items-start mb-6 relative z-10">
-                  <div>
-                    <span className="bg-white/20 px-3 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase backdrop-blur-sm">进行中</span>
-                    <h2 className="text-2xl font-bold mt-3 mb-1">{activeCourse.name}</h2>
-                    <p className="text-indigo-100 text-sm opacity-90 truncate max-w-[200px]">
-                        {activeCourse.diagnosis || activeCourse.description || '无详细描述'}
-                    </p>
+            {/* 多病程展示区域 - 改为横向滚动 */}
+            {activeCourses.length > 0 ? (
+              <div className="flex overflow-x-auto snap-x snap-mandatory gap-4 pb-4 -mx-5 px-5 scrollbar-hide">
+                {activeCourses.map(course => (
+                  <div 
+                    key={course.id}
+                    onClick={() => navigateToCourse(course.id)}
+                    className="min-w-[85%] snap-center bg-gradient-to-br from-indigo-600 to-violet-600 rounded-[2rem] p-6 text-white shadow-xl shadow-indigo-200 cursor-pointer relative overflow-hidden group transition-transform active:scale-[0.98]"
+                  >
+                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                       <Activity className="w-32 h-32" />
+                    </div>
+                    <div className="flex justify-between items-start mb-6 relative z-10">
+                      <div>
+                        <span className="bg-white/20 px-3 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase backdrop-blur-sm">进行中</span>
+                        <h2 className="text-xl font-bold mt-3 mb-1 truncate max-w-[180px]">{course.name}</h2>
+                        <p className="text-indigo-100 text-sm opacity-90 truncate max-w-[200px]">
+                            {course.diagnosis || course.description || '无详细描述'}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <span className="block text-5xl font-bold tracking-tighter">{getDaysSince(course.startDate)}</span>
+                        <span className="text-xs text-indigo-200 font-medium uppercase tracking-widest">Days</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs font-mono bg-black/20 w-fit px-3 py-1.5 rounded-lg backdrop-blur-sm">
+                       <Clock className="w-3 h-3" />
+                       开始于 {course.startDate}
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <span className="block text-5xl font-bold tracking-tighter">{getDaysSince(activeCourse.startDate)}</span>
-                    <span className="text-xs text-indigo-200 font-medium uppercase tracking-widest">Days</span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 text-xs font-mono bg-black/20 w-fit px-3 py-1.5 rounded-lg backdrop-blur-sm">
-                   <Clock className="w-3 h-3" />
-                   开始于 {activeCourse.startDate}
+                ))}
+                
+                {/* 这是一个“添加”卡片，滑到最后提示用户可以加新的 */}
+                <div 
+                  onClick={() => { setModalType('newCourse'); setIsModalOpen(true); }}
+                  className="min-w-[20%] snap-center flex items-center justify-center bg-white border-2 border-dashed border-slate-200 rounded-[2rem] text-slate-300 cursor-pointer active:bg-slate-50"
+                >
+                   <Plus className="w-8 h-8" />
                 </div>
               </div>
             ) : (
+              // 如果没有病程，显示大卡片引导
               <div 
                 onClick={() => { setModalType('newCourse'); setIsModalOpen(true); }}
                 className="bg-white border-2 border-dashed border-slate-200 rounded-[2rem] p-8 text-center hover:border-indigo-400 hover:bg-indigo-50/50 transition-all cursor-pointer group"
@@ -299,7 +322,7 @@ export default function App() {
                   <BookOpen className="w-7 h-7 text-slate-400 group-hover:text-indigo-600" />
                 </div>
                 <h3 className="font-bold text-slate-700 text-lg">开启新病程</h3>
-                <p className="text-xs text-slate-400 mt-2">记录一次完整的生病周期（如：甲流）</p>
+                <p className="text-xs text-slate-400 mt-2">记录一次完整的生病周期（如：甲流、慢性病）</p>
               </div>
             )}
 
@@ -338,98 +361,73 @@ export default function App() {
         )}
       </main>
 
-      {/* --- 底部悬浮操作区 (V8 竖向堆叠版) --- */}
+      {/* --- 底部悬浮操作区 --- */}
       <div className="fixed bottom-8 left-0 right-0 px-6 max-w-lg mx-auto flex items-end justify-between gap-4 pointer-events-none z-50">
          
          {/* 左侧：黑色灵动岛导航 */}
          <div className="flex-1 bg-[#1c1c1e]/90 backdrop-blur-xl shadow-2xl rounded-[2.5rem] p-1.5 pl-2 pr-2 h-[4.5rem] flex items-center justify-between pointer-events-auto border border-white/10 relative">
-            
-            {/* 导航项：概览 */}
             <button 
               onClick={() => setActiveView('dashboard')}
               className={`flex-1 h-full rounded-[2rem] flex flex-col items-center justify-center gap-1 transition-all duration-300 relative z-10 ${activeView === 'dashboard' ? 'text-white font-semibold' : 'text-gray-500 hover:text-gray-300'}`}
             >
-              {activeView === 'dashboard' && (
-                <div className="absolute inset-0 bg-blue-600 rounded-[2rem] shadow-lg -z-10 animate-fade-in" />
-              )}
+              {activeView === 'dashboard' && <div className="absolute inset-0 bg-blue-600 rounded-[2rem] shadow-lg -z-10 animate-fade-in" />}
               <LayoutDashboard className="w-6 h-6" strokeWidth={activeView === 'dashboard' ? 2.5 : 2} />
               <span className="text-[10px] tracking-wide">概览</span>
             </button>
-
-            {/* 导航项：统计 */}
             <button 
               onClick={() => setActiveView('stats')}
               className={`flex-1 h-full rounded-[2rem] flex flex-col items-center justify-center gap-1 transition-all duration-300 relative z-10 ${activeView === 'stats' ? 'text-white font-semibold' : 'text-gray-500 hover:text-gray-300'}`}
             >
-              {activeView === 'stats' && (
-                <div className="absolute inset-0 bg-blue-600 rounded-[2rem] shadow-lg -z-10 animate-fade-in" />
-              )}
+              {activeView === 'stats' && <div className="absolute inset-0 bg-blue-600 rounded-[2rem] shadow-lg -z-10 animate-fade-in" />}
               <BarChart3 className="w-6 h-6" strokeWidth={activeView === 'stats' ? 2.5 : 2} />
               <span className="text-[10px] tracking-wide">统计</span>
             </button>
-
-            {/* 导航项：历史 */}
             <button 
               onClick={() => setActiveView('history')}
               className={`flex-1 h-full rounded-[2rem] flex flex-col items-center justify-center gap-1 transition-all duration-300 relative z-10 ${activeView === 'history' ? 'text-white font-semibold' : 'text-gray-500 hover:text-gray-300'}`}
             >
-              {activeView === 'history' && (
-                <div className="absolute inset-0 bg-blue-600 rounded-[2rem] shadow-lg -z-10 animate-fade-in" />
-              )}
+              {activeView === 'history' && <div className="absolute inset-0 bg-blue-600 rounded-[2rem] shadow-lg -z-10 animate-fade-in" />}
               <History className="w-6 h-6" strokeWidth={activeView === 'history' ? 2.5 : 2} />
               <span className="text-[10px] tracking-wide">历史</span>
             </button>
          </div>
 
-         {/* 右侧：独立圆形操作按钮 (FAB) & 竖向菜单 */}
+         {/* 右侧：竖向菜单 */}
          <div className="relative pointer-events-auto flex flex-col items-center">
-            
-            {/* 竖向弹出菜单 */}
             <div className={`absolute bottom-0 w-full flex flex-col items-end gap-3 mb-[5.5rem] transition-all duration-300 ${isFabOpen ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10 pointer-events-none'}`}>
                
-               {/* 1. 记不适 (红) */}
                <button 
                  onClick={() => { setModalType('symptom'); setIsModalOpen(true); }}
                  className="flex items-center gap-3 group"
                >
-                 <span className="bg-white/90 backdrop-blur text-slate-800 text-xs font-bold px-3 py-1.5 rounded-xl shadow-sm whitespace-nowrap border border-white/20">
-                    记不适
-                 </span>
+                 <span className="bg-white/90 backdrop-blur text-slate-800 text-xs font-bold px-3 py-1.5 rounded-xl shadow-sm whitespace-nowrap border border-white/20">记不适</span>
                  <div className="w-12 h-12 bg-rose-500 text-white rounded-full shadow-lg flex items-center justify-center transition-transform active:scale-95 border-2 border-[#f0f0f0]">
                     <Activity className="w-5 h-5" />
                  </div>
                </button>
 
-               {/* 2. 记用药 (紫) */}
                <button 
                  onClick={() => { setModalType('medication'); setIsModalOpen(true); }}
                  className="flex items-center gap-3 group"
                >
-                 <span className="bg-white/90 backdrop-blur text-slate-800 text-xs font-bold px-3 py-1.5 rounded-xl shadow-sm whitespace-nowrap border border-white/20">
-                    记用药
-                 </span>
+                 <span className="bg-white/90 backdrop-blur text-slate-800 text-xs font-bold px-3 py-1.5 rounded-xl shadow-sm whitespace-nowrap border border-white/20">记用药</span>
                  <div className="w-12 h-12 bg-indigo-600 text-white rounded-full shadow-lg flex items-center justify-center transition-transform active:scale-95 border-2 border-[#f0f0f0]">
                     <Pill className="w-5 h-5" />
                  </div>
                </button>
 
-               {/* 3. 新病程 (白) */}
-               {!activeCourse && (
-                  <button 
-                    onClick={() => { setModalType('newCourse'); setIsModalOpen(true); }}
-                    className="flex items-center gap-3 group"
-                  >
-                    <span className="bg-white/90 backdrop-blur text-slate-800 text-xs font-bold px-3 py-1.5 rounded-xl shadow-sm whitespace-nowrap border border-white/20">
-                        新病程
-                    </span>
-                    <div className="w-12 h-12 bg-white text-slate-800 rounded-full shadow-lg flex items-center justify-center transition-transform active:scale-95 border-2 border-slate-200">
-                        <BookOpen className="w-5 h-5" />
-                    </div>
-                  </button>
-               )}
+               {/* 现在这个按钮始终存在 */}
+               <button 
+                 onClick={() => { setModalType('newCourse'); setIsModalOpen(true); }}
+                 className="flex items-center gap-3 group"
+               >
+                 <span className="bg-white/90 backdrop-blur text-slate-800 text-xs font-bold px-3 py-1.5 rounded-xl shadow-sm whitespace-nowrap border border-white/20">新病程</span>
+                 <div className="w-12 h-12 bg-white text-slate-800 rounded-full shadow-lg flex items-center justify-center transition-transform active:scale-95 border-2 border-slate-200">
+                     <BookOpen className="w-5 h-5" />
+                 </div>
+               </button>
             </div>
 
-            {/* 主 FAB 按钮 */}
             <button 
               onClick={() => setIsFabOpen(!isFabOpen)}
               className={`w-[4.5rem] h-[4.5rem] rounded-full shadow-2xl flex items-center justify-center transition-all duration-300 z-50 relative border border-white/10 ${isFabOpen ? 'bg-[#2c2c2e] rotate-45' : 'bg-[#1c1c1e] hover:scale-105 active:scale-95'}`}
@@ -437,16 +435,9 @@ export default function App() {
               <Plus className="w-8 h-8 text-white" strokeWidth={3} />
             </button>
          </div>
-
       </div>
       
-      {/* 遮罩层 */}
-      {isFabOpen && (
-        <div 
-          className="fixed inset-0 bg-slate-900/30 backdrop-blur-[2px] z-40 transition-opacity duration-300"
-          onClick={() => setIsFabOpen(false)}
-        />
-      )}
+      {isFabOpen && <div className="fixed inset-0 bg-slate-900/30 backdrop-blur-[2px] z-40 transition-opacity duration-300" onClick={() => setIsFabOpen(false)} />}
 
       {/* 模态框 */}
       {isModalOpen && (
@@ -471,13 +462,13 @@ export default function App() {
                   defaultParts={DEFAULT_BODY_PARTS} 
                   customParts={customParts} 
                   onAddPart={handleAddCustomPart}
-                  activeCourse={activeCourse}
+                  activeCourses={activeCourses}
                 />
               )}
               {modalType === 'medication' && (
                 <MedicationForm 
                   onSubmit={handleAddLog} 
-                  activeCourse={activeCourse}
+                  activeCourses={activeCourses}
                 />
               )}
             </div>
@@ -490,7 +481,7 @@ export default function App() {
 }
 
 // --- Stats View ---
-
+// ... StatsView 保持不变 (V7.1 版) ...
 function StatsView({ logs }) {
   const [currentDate, setCurrentDate] = useState(new Date());
 
@@ -611,17 +602,14 @@ function StatsView({ logs }) {
   );
 }
 
-// --- Detail View ---
-
+// --- Detail View & Others (保持不变，引用 V7.1 修复版) ---
 function CourseDetailView({ course, logs, onUpdateStatus, onDeleteLog }) {
   if (!course) return <div>病程不存在</div>;
 
   const isRecovered = course.status === 'recovered';
   
-  // Group logs by day
   const timelineData = useMemo(() => {
     const grouped = {};
-    // Use safeDate to prevent iOS crash
     const start = safeDate(course.startDate);
     start.setHours(0,0,0,0);
 
@@ -643,7 +631,6 @@ function CourseDetailView({ course, logs, onUpdateStatus, onDeleteLog }) {
 
   return (
     <div className="space-y-6 animate-fade-in pb-10">
-      {/* Course Info */}
       <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm relative overflow-hidden">
         <div className="flex justify-between items-start mb-6 relative z-10">
            <div>
@@ -736,8 +723,6 @@ function CourseDetailView({ course, logs, onUpdateStatus, onDeleteLog }) {
     </div>
   );
 }
-
-// --- Forms ---
 
 function NewCourseForm({ onSubmit }) {
   const [data, setData] = useState({ 
@@ -859,12 +844,13 @@ function NewCourseForm({ onSubmit }) {
   );
 }
 
-function SymptomForm({ onSubmit, defaultParts, customParts, onAddPart, activeCourse }) {
+// 核心升级：支持多病程选择
+function SymptomForm({ onSubmit, defaultParts, customParts, onAddPart, activeCourses }) {
   const [formData, setFormData] = useState({
     bodyPart: '',
     severity: 3,
     note: '',
-    courseId: activeCourse ? activeCourse.id : '',
+    courseId: activeCourses.length > 0 ? activeCourses[0].id : '', // 默认选第一个
     isProgression: false 
   });
   const [newPart, setNewPart] = useState('');
@@ -882,25 +868,39 @@ function SymptomForm({ onSubmit, defaultParts, customParts, onAddPart, activeCou
 
   return (
     <div className="space-y-6">
-      {/* 病程关联 */}
-      {activeCourse && (
+      {/* 多病程选择器 */}
+      {activeCourses.length > 0 && (
         <div className="bg-indigo-50 p-4 rounded-2xl space-y-3">
-          <div className="flex items-center gap-3">
-            <input 
-              type="checkbox" 
-              id="linkCourse" 
-              checked={!!formData.courseId} 
-              onChange={(e) => setFormData({...formData, courseId: e.target.checked ? activeCourse.id : ''})}
-              className="w-5 h-5 accent-indigo-600 rounded"
-            />
-            <label htmlFor="linkCourse" className="text-sm font-medium text-indigo-900">
-              关联到：<span className="font-bold">{activeCourse.name}</span>
-            </label>
+          <label className="text-xs font-bold text-indigo-900 uppercase">关联病程</label>
+          <div className="flex flex-col gap-2">
+            {activeCourses.map(course => (
+              <div key={course.id} className="flex items-center gap-2">
+                <input 
+                  type="radio" 
+                  name="courseSelector"
+                  id={`c-${course.id}`}
+                  checked={formData.courseId === course.id}
+                  onChange={() => setFormData({...formData, courseId: course.id})}
+                  className="w-4 h-4 accent-indigo-600"
+                />
+                <label htmlFor={`c-${course.id}`} className="text-sm text-slate-700">{course.name}</label>
+              </div>
+            ))}
+            <div className="flex items-center gap-2">
+              <input 
+                type="radio" 
+                name="courseSelector"
+                id="c-none"
+                checked={formData.courseId === ''}
+                onChange={() => setFormData({...formData, courseId: ''})}
+                className="w-4 h-4 accent-indigo-600"
+              />
+              <label htmlFor="c-none" className="text-sm text-slate-500">不关联 (日常记录)</label>
+            </div>
           </div>
           
-          {/* 病情变化记录开关 */}
           {formData.courseId && (
-            <div className="ml-8 flex items-center gap-2 bg-white/50 p-2 rounded-lg border border-indigo-100">
+            <div className="ml-6 flex items-center gap-2 bg-white/50 p-2 rounded-lg border border-indigo-100 mt-2">
                <input 
                   type="checkbox" 
                   id="progression"
@@ -910,7 +910,7 @@ function SymptomForm({ onSubmit, defaultParts, customParts, onAddPart, activeCou
                />
                <label htmlFor="progression" className="text-xs text-indigo-800 flex items-center gap-1 font-medium">
                   <GitCommit className="w-4 h-4 text-orange-500" />
-                  标记为病情变化/转折 (如：引发并发症)
+                  标记为病情变化/转折
                </label>
             </div>
           )}
@@ -995,30 +995,47 @@ function SymptomForm({ onSubmit, defaultParts, customParts, onAddPart, activeCou
   );
 }
 
-function MedicationForm({ onSubmit, activeCourse }) {
+function MedicationForm({ onSubmit, activeCourses }) {
   const [formData, setFormData] = useState({
     name: '',
     method: 'oral',
     customMethod: '', 
     dosage: '',
     reason: '',
-    courseId: activeCourse ? activeCourse.id : ''
+    courseId: activeCourses.length > 0 ? activeCourses[0].id : ''
   });
 
   return (
     <div className="space-y-6">
-      {activeCourse && (
-        <div className="bg-indigo-50 p-4 rounded-2xl flex items-center gap-3">
-          <input 
-            type="checkbox" 
-            id="linkCourseMed" 
-            checked={!!formData.courseId} 
-            onChange={(e) => setFormData({...formData, courseId: e.target.checked ? activeCourse.id : ''})}
-            className="w-5 h-5 accent-indigo-600 rounded"
-          />
-          <label htmlFor="linkCourseMed" className="text-sm font-medium text-indigo-900">
-            关联到：<span className="font-bold">{activeCourse.name}</span>
-          </label>
+      {activeCourses.length > 0 && (
+        <div className="bg-indigo-50 p-4 rounded-2xl space-y-3">
+          <label className="text-xs font-bold text-indigo-900 uppercase">关联病程</label>
+          <div className="flex flex-col gap-2">
+            {activeCourses.map(course => (
+              <div key={course.id} className="flex items-center gap-2">
+                <input 
+                  type="radio" 
+                  name="courseSelectorMed"
+                  id={`cm-${course.id}`}
+                  checked={formData.courseId === course.id}
+                  onChange={() => setFormData({...formData, courseId: course.id})}
+                  className="w-4 h-4 accent-indigo-600"
+                />
+                <label htmlFor={`cm-${course.id}`} className="text-sm text-slate-700">{course.name}</label>
+              </div>
+            ))}
+            <div className="flex items-center gap-2">
+              <input 
+                type="radio" 
+                name="courseSelectorMed"
+                id="cm-none"
+                checked={formData.courseId === ''}
+                onChange={() => setFormData({...formData, courseId: ''})}
+                className="w-4 h-4 accent-indigo-600"
+              />
+              <label htmlFor="cm-none" className="text-sm text-slate-500">不关联 (日常记录)</label>
+            </div>
+          </div>
         </div>
       )}
 
@@ -1106,8 +1123,7 @@ function MedicationForm({ onSubmit, activeCourse }) {
   );
 }
 
-// --- Common ---
-
+// ... LogItem, HistoryView, SettingsView 保持不变 (与 V7.1 相同) ...
 function LogItem({ log, onDelete, simple = false }) {
   const isSymptom = log.type === 'symptom';
   const isProgression = log.isProgression; 
@@ -1171,13 +1187,11 @@ function LogItem({ log, onDelete, simple = false }) {
 function HistoryView({ logs, onDelete }) {
   const [searchTerm, setSearchTerm] = useState('');
 
-  // 搜索过滤逻辑
   const filteredLogs = useMemo(() => {
     if (!searchTerm.trim()) return logs;
     const lowerTerm = searchTerm.toLowerCase();
     
     return logs.filter(log => {
-      // 搜索多个字段
       const matchName = log.name?.toLowerCase().includes(lowerTerm);
       const matchPart = log.bodyPart?.toLowerCase().includes(lowerTerm);
       const matchNote = log.note?.toLowerCase().includes(lowerTerm);
@@ -1192,7 +1206,6 @@ function HistoryView({ logs, onDelete }) {
 
   return (
     <div className="space-y-4 animate-fade-in">
-       {/* Search Bar */}
        <div className="sticky top-0 bg-slate-50/95 backdrop-blur-sm pt-2 pb-4 z-10">
          <div className="relative">
            <Search className="absolute left-4 top-4 w-5 h-5 text-slate-400" />
@@ -1238,7 +1251,6 @@ function SettingsView({ onExport, onImport, fileInputRef, handleImport, webdavCo
         </p>
       </div>
 
-      {/* Cloud Sync (Beta) */}
       <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden p-5">
         <button 
           onClick={() => setShowWebDav(!showWebDav)} 
