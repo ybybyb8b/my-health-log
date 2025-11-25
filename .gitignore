@@ -1,0 +1,30 @@
+node_modules
+dist
+.DS_Store
+.env
+
+
+*(如果你之前没有这个文件，这不仅能解决报错，还能让你上传速度快 100 倍，因为不用传那几万个依赖文件了)*
+
+#### 第二步：清理 Git 缓存并重新上传
+
+因为之前已经把脏东西（node_modules）传上去了，我们需要把它撤下来。请在 VS Code 的终端里，**依次执行**下面 4 行命令：
+
+1.  **删除 Git 里的缓存**（不会删你本地文件，放心）：
+    ```bash
+    git rm -r --cached .
+    ```
+
+2.  **重新添加文件**（这次它会看见 .gitignore 并自动忽略 node_modules）：
+    ```bash
+    git add .
+    ```
+
+3.  **提交更改**：
+    ```bash
+    git commit -m "添加忽略规则，修复构建错误"
+    ```
+
+4.  **推送到 GitHub**：
+    ```bash
+    git push
