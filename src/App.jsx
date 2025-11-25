@@ -8,7 +8,7 @@ import {
   Trash2, 
   X, 
   ChevronLeft,
-  ChevronRight, // ✅ 确保已引入
+  ChevronRight, 
   Droplet, 
   Pill,    
   Syringe, 
@@ -20,7 +20,7 @@ import {
   Stethoscope, 
   Clipboard,
   BarChart3,
-  AlertTriangle, // ✅ 确保已引入
+  AlertTriangle,
   GitCommit,
   Search,
   Cloud,
@@ -46,7 +46,6 @@ const safeDate = (dateInput) => {
   if (!dateInput) return new Date();
   if (dateInput instanceof Date) return dateInput;
   if (typeof dateInput === 'string') {
-    // 只有当包含 - 且不包含 T (非 ISO 时间戳) 时才替换
     if (dateInput.includes('-') && !dateInput.includes('T')) {
         return new Date(dateInput.replace(/-/g, '/'));
     }
@@ -84,7 +83,6 @@ const getDaysSince = (startDate) => {
   return diffDays + 1; 
 };
 
-// 获取本地今天日期字符串 (YYYY-MM-DD)
 const getLocalTodayDate = () => {
   const now = new Date();
   const year = now.getFullYear();
@@ -112,6 +110,9 @@ export default function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalType, setModalType] = useState('symptom'); 
   const [isFabOpen, setIsFabOpen] = useState(false);
+  
+  // 用于控制是否自动聚焦搜索框
+  const [autoFocusSearch, setAutoFocusSearch] = useState(false);
   
   const fileInputRef = useRef(null);
 
@@ -195,6 +196,14 @@ export default function App() {
     setActiveView('courseDetail');
   };
 
+  // 顶部搜索按钮点击事件
+  const handleGlobalSearch = () => {
+    setActiveView('history');
+    setAutoFocusSearch(true);
+    // 重置 focus 状态，以便下次点击还能触发
+    setTimeout(() => setAutoFocusSearch(false), 500);
+  };
+
   const activeCourses = useMemo(() => courses.filter(c => c.status === 'active'), [courses]);
 
   const stats = useMemo(() => {
@@ -248,12 +257,23 @@ export default function App() {
             </h1>
           </div>
         )}
-        <button 
-          onClick={() => setActiveView(activeView === 'settings' ? 'dashboard' : 'settings')}
-          className={`p-2.5 rounded-full transition-all active:scale-95 ${activeView === 'settings' ? 'bg-slate-100 text-slate-900' : 'text-slate-400 hover:bg-slate-50'}`}
-        >
-          <Settings className="w-6 h-6" strokeWidth={2} />
-        </button>
+        
+        <div className="flex items-center gap-2">
+          {/* 全局搜索按钮 */}
+          <button 
+            onClick={handleGlobalSearch}
+            className="p-2.5 rounded-full text-slate-400 hover:bg-slate-50 active:bg-slate-100 transition-all"
+          >
+            <Search className="w-6 h-6" strokeWidth={2} />
+          </button>
+
+          <button 
+            onClick={() => setActiveView(activeView === 'settings' ? 'dashboard' : 'settings')}
+            className={`p-2.5 rounded-full transition-all active:scale-95 ${activeView === 'settings' ? 'bg-slate-100 text-slate-900' : 'text-slate-400 hover:bg-slate-50'}`}
+          >
+            <Settings className="w-6 h-6" strokeWidth={2} />
+          </button>
+        </div>
       </header>
 
       {/* 主内容区 */}
@@ -269,7 +289,8 @@ export default function App() {
              onSync={handleWebDavSync}
            />
         )}
-        {activeView === 'history' && <HistoryView logs={logs} onDelete={handleDeleteLog} />}
+        {/* 传入 courses 和 autoFocus 状态 */}
+        {activeView === 'history' && <HistoryView logs={logs} courses={courses} onDelete={handleDeleteLog} autoFocus={autoFocusSearch} />}
         {activeView === 'stats' && <StatsView logs={logs} />}
         {activeView === 'courseDetail' && (
           <CourseDetailView 
@@ -281,7 +302,7 @@ export default function App() {
         )}
         {activeView === 'dashboard' && (
           <div className="space-y-6 animate-fade-in">
-            {/* 多病程展示区域 */}
+            {/* 多病程展示 */}
             {activeCourses.length > 0 ? (
               <div className="flex overflow-x-auto snap-x snap-mandatory gap-4 pb-4 -mx-5 px-5 scrollbar-hide">
                 {activeCourses.map(course => (
@@ -371,7 +392,7 @@ export default function App() {
       {/* --- 底部悬浮操作区 --- */}
       <div className="fixed bottom-8 left-0 right-0 px-6 max-w-lg mx-auto flex items-end justify-between gap-4 pointer-events-none z-50">
          
-         {/* 左侧：黑色灵动岛导航 */}
+         {/* 左侧：灵动岛导航 */}
          <div className="flex-1 bg-[#1c1c1e]/90 backdrop-blur-xl shadow-2xl rounded-[2.5rem] p-1.5 pl-2 pr-2 h-[4.5rem] flex items-center justify-between pointer-events-auto border border-white/10 relative">
             <button 
               onClick={() => setActiveView('dashboard')}
@@ -486,329 +507,87 @@ export default function App() {
   );
 }
 
-// --- SymptomForm 组件 ---
-function SymptomForm({ onSubmit, defaultParts, customParts, onAddPart, activeCourses }) {
-  const [formData, setFormData] = useState({
-    bodyPart: '',
-    severity: 3,
-    note: '',
-    courseId: activeCourses.length > 0 ? activeCourses[0].id : '',
-    isProgression: false,
-    recordDate: getLocalTodayDate() 
-  });
-  const [newPart, setNewPart] = useState('');
-  const [isAddingPart, setIsAddingPart] = useState(false);
+// --- HistoryView 组件 (升级版：支持搜索 Courses 和 日期) ---
+function HistoryView({ logs, courses = [], onDelete, autoFocus = false }) {
+  const [searchTerm, setSearchTerm] = useState('');
+  const inputRef = useRef(null);
 
-  const handleAddPart = () => {
-    if (onAddPart(newPart)) {
-      setFormData({...formData, bodyPart: newPart});
-      setIsAddingPart(false);
-      setNewPart('');
-    } else { alert('无效或已存在'); }
-  };
+  useEffect(() => {
+    if (autoFocus && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [autoFocus]);
 
-  const allParts = [...defaultParts, ...customParts];
+  // 智能搜索逻辑
+  const filteredLogs = useMemo(() => {
+    if (!searchTerm.trim()) return logs;
+    const lowerTerm = searchTerm.toLowerCase();
+    
+    return logs.filter(log => {
+      // 1. 基础字段搜索
+      const matchName = log.name?.toLowerCase().includes(lowerTerm);
+      const matchPart = log.bodyPart?.toLowerCase().includes(lowerTerm);
+      const matchNote = log.note?.toLowerCase().includes(lowerTerm);
+      const matchReason = log.reason?.toLowerCase().includes(lowerTerm);
+      const matchDosage = log.dosage?.toLowerCase().includes(lowerTerm);
+      
+      // 2. 日期搜索 (如搜 "11月" 或 "2023")
+      const dateStr = formatDate(log.timestamp).toLowerCase();
+      const matchDate = dateStr.includes(lowerTerm);
 
-  return (
-    <div className="space-y-6">
-      {activeCourses.length > 0 && (
-        <div className="bg-indigo-50 p-4 rounded-2xl space-y-3">
-          <label className="text-xs font-bold text-indigo-900 uppercase">关联病程</label>
-          <div className="flex flex-col gap-2">
-            {activeCourses.map(course => (
-              <div key={course.id} className="flex items-center gap-2">
-                <input 
-                  type="radio" 
-                  name="courseSelector"
-                  id={`c-${course.id}`}
-                  checked={formData.courseId === course.id}
-                  onChange={() => setFormData({...formData, courseId: course.id})}
-                  className="w-4 h-4 accent-indigo-600"
-                />
-                <label htmlFor={`c-${course.id}`} className="text-sm text-slate-700">{course.name}</label>
-              </div>
-            ))}
-            <div className="flex items-center gap-2">
-              <input 
-                type="radio" 
-                name="courseSelector"
-                id="c-none"
-                checked={formData.courseId === ''}
-                onChange={() => setFormData({...formData, courseId: ''})}
-                className="w-4 h-4 accent-indigo-600"
-              />
-              <label htmlFor="c-none" className="text-sm text-slate-500">不关联 (日常记录)</label>
-            </div>
-          </div>
-          
-          {formData.courseId && (
-            <div className="ml-6 flex items-center gap-2 bg-white/50 p-2 rounded-lg border border-indigo-100 mt-2">
-               <input 
-                  type="checkbox" 
-                  id="progression"
-                  checked={formData.isProgression}
-                  onChange={(e) => setFormData({...formData, isProgression: e.target.checked})}
-                  className="w-4 h-4 accent-orange-500 rounded"
-               />
-               <label htmlFor="progression" className="text-xs text-indigo-800 flex items-center gap-1 font-medium">
-                  <GitCommit className="w-4 h-4 text-orange-500" />
-                  标记为病情变化/转折
-               </label>
-            </div>
-          )}
-        </div>
-      )}
+      // 3. 病程名称搜索 (如搜 "甲流")
+      let matchCourse = false;
+      if (log.courseId && courses.length > 0) {
+        const course = courses.find(c => c.id === log.courseId);
+        if (course && course.name.toLowerCase().includes(lowerTerm)) {
+          matchCourse = true;
+        }
+      }
+      
+      return matchName || matchPart || matchNote || matchReason || matchDosage || matchDate || matchCourse;
+    });
+  }, [logs, searchTerm, courses]);
 
-      <div>
-        <label className="block text-sm font-semibold text-slate-700 mb-3">不适部位</label>
-        <div className="flex flex-wrap gap-2">
-          {allParts.map(part => (
-            <button
-              key={part}
-              onClick={() => setFormData({...formData, bodyPart: part})}
-              className={`px-4 py-2.5 rounded-xl text-sm transition-all border ${
-                formData.bodyPart === part 
-                  ? 'bg-rose-50 border-rose-500 text-rose-700 shadow-sm font-medium' 
-                  : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'
-              }`}
-            >
-              {part}
-            </button>
-          ))}
-          {isAddingPart ? (
-            <div className="flex items-center gap-2 animate-fade-in">
-              <input 
-                autoFocus
-                type="text" 
-                value={newPart} 
-                onChange={(e) => setNewPart(e.target.value)}
-                placeholder="部位..."
-                className="w-24 px-3 py-2 text-sm border border-indigo-300 rounded-xl outline-none"
-              />
-              <button onClick={handleAddPart} className="p-2 bg-indigo-600 text-white rounded-xl"><Plus className="w-4 h-4"/></button>
-            </div>
-          ) : (
-            <button 
-              onClick={() => setIsAddingPart(true)}
-              className="px-4 py-2.5 rounded-xl text-sm border border-dashed border-slate-300 text-slate-400 hover:text-indigo-600 flex items-center gap-1 hover:border-indigo-300 transition-colors"
-            >
-              <Plus className="w-4 h-4" /> 自定义
-            </button>
-          )}
-        </div>
-      </div>
-
-      <div>
-        <div className="flex justify-between mb-2">
-          <label className="text-sm font-semibold text-slate-700">严重程度</label>
-          <span className="text-sm font-mono text-slate-500">{formData.severity} / 10</span>
-        </div>
-        <input 
-          type="range" min="1" max="10" value={formData.severity}
-          onChange={(e) => setFormData({...formData, severity: parseInt(e.target.value)})}
-          className="w-full h-2 bg-slate-200 rounded-full appearance-none accent-rose-500 cursor-pointer"
-        />
-        <div className="flex justify-between mt-2 text-xs text-slate-400 font-medium">
-          <span>😊 轻微</span>
-          <span>😫 剧烈</span>
-        </div>
-      </div>
-
-      <div>
-        <label className="block text-sm font-semibold text-slate-700 mb-2">详细描述</label>
-        <textarea 
-          value={formData.note}
-          onChange={(e) => setFormData({...formData, note: e.target.value})}
-          className="w-full p-4 bg-slate-50 border-0 rounded-2xl focus:ring-2 focus:ring-indigo-100 outline-none text-sm min-h-[100px] resize-none transition-all"
-          placeholder={formData.isProgression ? "请详细描述病情发生了什么变化..." : "例如：刺痛、持续时间..."}
-        />
-      </div>
-
-      <div>
-        <label className="block text-sm font-semibold text-slate-700 mb-2">记录日期 (默认今天)</label>
-        <input 
-          type="date"
-          value={formData.recordDate}
-          onChange={(e) => setFormData({...formData, recordDate: e.target.value})}
-          className="w-full p-4 bg-slate-50 border-0 rounded-2xl focus:ring-2 focus:ring-indigo-100 outline-none text-sm"
-        />
-      </div>
-
-      <button 
-        onClick={() => {
-          if(!formData.bodyPart) return alert('请选择部位');
-          let finalDate = new Date(formData.recordDate.replace(/-/g, '/')); 
-          const today = new Date();
-          
-          if (finalDate.toDateString() === today.toDateString()) {
-             finalDate = today;
-          } else {
-             finalDate.setHours(12, 0, 0, 0);
-          }
-          
-          const timestamp = finalDate.toISOString();
-          onSubmit({ type: 'symptom', ...formData, timestamp });
-        }}
-        className="w-full py-4 bg-slate-900 text-white rounded-2xl font-bold hover:bg-slate-800 transition-transform active:scale-[0.98]"
-      >
-        保存记录
-      </button>
-    </div>
-  );
-}
-
-// --- MedicationForm 组件 ---
-function MedicationForm({ onSubmit, activeCourses }) {
-  const [formData, setFormData] = useState({
-    name: '',
-    method: 'oral',
-    customMethod: '', 
-    dosage: '',
-    reason: '',
-    courseId: activeCourses.length > 0 ? activeCourses[0].id : '',
-    recordDate: getLocalTodayDate()
-  });
+  const sortedLogs = [...filteredLogs].sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp));
 
   return (
-    <div className="space-y-6">
-      {activeCourses.length > 0 && (
-        <div className="bg-indigo-50 p-4 rounded-2xl space-y-3">
-          <label className="text-xs font-bold text-indigo-900 uppercase">关联病程</label>
-          <div className="flex flex-col gap-2">
-            {activeCourses.map(course => (
-              <div key={course.id} className="flex items-center gap-2">
-                <input 
-                  type="radio" 
-                  name="courseSelectorMed"
-                  id={`cm-${course.id}`}
-                  checked={formData.courseId === course.id}
-                  onChange={() => setFormData({...formData, courseId: course.id})}
-                  className="w-4 h-4 accent-indigo-600"
-                />
-                <label htmlFor={`cm-${course.id}`} className="text-sm text-slate-700">{course.name}</label>
-              </div>
-            ))}
-            <div className="flex items-center gap-2">
-              <input 
-                type="radio" 
-                name="courseSelectorMed"
-                id="cm-none"
-                checked={formData.courseId === ''}
-                onChange={() => setFormData({...formData, courseId: ''})}
-                className="w-4 h-4 accent-indigo-600"
-              />
-              <label htmlFor="cm-none" className="text-sm text-slate-500">不关联 (日常记录)</label>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <div>
-        <label className="block text-sm font-semibold text-slate-700 mb-2">药品/治疗名称</label>
-        <input 
-          type="text"
-          value={formData.name}
-          onChange={(e) => setFormData({...formData, name: e.target.value})}
-          className="w-full p-4 bg-slate-50 border-0 rounded-2xl focus:ring-2 focus:ring-indigo-100 outline-none transition-all"
-          placeholder="例如：奥司他韦..."
-        />
-      </div>
-
-      <div>
-        <label className="block text-sm font-semibold text-slate-700 mb-3">给药方式</label>
-        <div className="grid grid-cols-5 gap-2">
-          {MEDICATION_METHODS.map(m => (
-            <button
-              key={m.id}
-              onClick={() => setFormData({...formData, method: m.id})}
-              className={`flex flex-col items-center justify-center gap-1.5 p-3 rounded-2xl border transition-all ${
-                formData.method === m.id 
-                  ? 'bg-indigo-50 border-indigo-500 text-indigo-700 shadow-sm' 
-                  : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'
-              }`}
-            >
-              {m.icon}
-            </button>
-          ))}
-        </div>
-        
-        {formData.method === 'other' ? (
+    <div className="space-y-4 animate-fade-in">
+       <div className="sticky top-0 bg-slate-50/95 backdrop-blur-sm pt-2 pb-4 z-10">
+         <div className="relative">
+           <Search className="absolute left-4 top-4 w-5 h-5 text-slate-400" />
            <input 
-             autoFocus
-             type="text"
-             value={formData.customMethod}
-             onChange={(e) => setFormData({...formData, customMethod: e.target.value})}
-             placeholder="请输入具体方式 (如：纳肛、理疗)"
-             className="mt-3 w-full p-3 bg-indigo-50/50 border border-indigo-200 rounded-xl text-sm text-center outline-none focus:bg-white transition-all"
+             ref={inputRef}
+             type="text" 
+             placeholder="搜索症状、药品、病程、日期..." 
+             value={searchTerm}
+             onChange={(e) => setSearchTerm(e.target.value)}
+             className="w-full pl-12 pr-4 py-3.5 bg-white border border-slate-200 rounded-2xl shadow-sm outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-300 transition-all"
            />
-        ) : (
-           <p className="text-center text-xs text-slate-400 mt-2 font-medium">{MEDICATION_METHODS.find(m=>m.id===formData.method)?.label}</p>
-        )}
-      </div>
+           {searchTerm && (
+             <button onClick={() => setSearchTerm('')} className="absolute right-4 top-4 text-slate-400 hover:text-slate-600">
+               <X className="w-5 h-5" />
+             </button>
+           )}
+         </div>
+       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-semibold text-slate-700 mb-2">用量</label>
-          <input 
-            type="text"
-            value={formData.dosage}
-            onChange={(e) => setFormData({...formData, dosage: e.target.value})}
-            className="w-full p-4 bg-slate-50 border-0 rounded-2xl focus:ring-2 focus:ring-indigo-100 outline-none text-sm"
-            placeholder="如：75mg"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-semibold text-slate-700 mb-2">原因</label>
-          <input 
-            type="text"
-            value={formData.reason}
-            onChange={(e) => setFormData({...formData, reason: e.target.value})}
-            className="w-full p-4 bg-slate-50 border-0 rounded-2xl focus:ring-2 focus:ring-indigo-100 outline-none text-sm"
-            placeholder="如：发热"
-          />
-        </div>
-      </div>
-
-      <div>
-        <label className="block text-sm font-semibold text-slate-700 mb-2">用药日期 (默认今天)</label>
-        <input 
-          type="date"
-          value={formData.recordDate}
-          onChange={(e) => setFormData({...formData, recordDate: e.target.value})}
-          className="w-full p-4 bg-slate-50 border-0 rounded-2xl focus:ring-2 focus:ring-indigo-100 outline-none text-sm"
-        />
-      </div>
-
-      <button 
-        onClick={() => {
-          if(!formData.name) return alert('请输入名称');
-          const finalData = { ...formData };
-          if (formData.method === 'other') {
-             if (!formData.customMethod) return alert('请输入具体方式');
-             finalData.methodLabel = formData.customMethod;
-          }
-          
-          let finalDate = new Date(formData.recordDate.replace(/-/g, '/')); 
-          const today = new Date();
-          
-          if (finalDate.toDateString() === today.toDateString()) {
-             finalDate = today;
-          } else {
-             finalDate.setHours(12, 0, 0, 0);
-          }
-
-          const timestamp = finalDate.toISOString();
-          onSubmit({ type: 'medication', ...finalData, timestamp });
-        }}
-        className="w-full py-4 bg-slate-900 text-white rounded-2xl font-bold hover:bg-slate-800 transition-transform active:scale-[0.98]"
-      >
-        保存记录
-      </button>
+       <h3 className="text-lg font-bold text-slate-800 mb-2 px-2">
+         {searchTerm ? `找到 ${sortedLogs.length} 条记录` : '全部历史记录'}
+       </h3>
+       
+       {sortedLogs.length === 0 && (
+         <div className="text-center py-10 text-slate-400">
+           {searchTerm ? '没有找到相关记录' : '暂无记录'}
+         </div>
+       )}
+       
+       {sortedLogs.map(log => <LogItem key={log.id} log={log} onDelete={onDelete} />)}
     </div>
   );
 }
 
-// ... (LogItem, HistoryView, SettingsView, StatsView 保持 V9.1 的逻辑) ...
+// ... (LogItem, SettingsView, StatsView 等其他组件保持 V10 极简版逻辑) ...
+// (为了完整性，这里复用之前的 LogItem)
 function LogItem({ log, onDelete, simple = false }) {
   const isSymptom = log.type === 'symptom';
   const isProgression = log.isProgression; 
@@ -856,70 +635,12 @@ function LogItem({ log, onDelete, simple = false }) {
               {formatDate(log.timestamp)}
             </p>
           )}
-          {simple && (
-             <p className="text-xs text-slate-300 mt-1 font-mono">{new Date(log.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</p>
-          )}
         </div>
       </div>
       
       <button onClick={() => onDelete(log.id)} className="opacity-0 group-hover:opacity-100 text-slate-300 hover:text-red-500 p-2 transition-opacity">
         <Trash2 className="w-4 h-4" />
       </button>
-    </div>
-  );
-}
-
-function HistoryView({ logs, onDelete }) {
-  const [searchTerm, setSearchTerm] = useState('');
-
-  const filteredLogs = useMemo(() => {
-    if (!searchTerm.trim()) return logs;
-    const lowerTerm = searchTerm.toLowerCase();
-    
-    return logs.filter(log => {
-      const matchName = log.name?.toLowerCase().includes(lowerTerm);
-      const matchPart = log.bodyPart?.toLowerCase().includes(lowerTerm);
-      const matchNote = log.note?.toLowerCase().includes(lowerTerm);
-      const matchReason = log.reason?.toLowerCase().includes(lowerTerm);
-      const matchDosage = log.dosage?.toLowerCase().includes(lowerTerm);
-      
-      return matchName || matchPart || matchNote || matchReason || matchDosage;
-    });
-  }, [logs, searchTerm]);
-
-  const sortedLogs = [...filteredLogs].sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp));
-
-  return (
-    <div className="space-y-4 animate-fade-in">
-       <div className="sticky top-0 bg-slate-50/95 backdrop-blur-sm pt-2 pb-4 z-10">
-         <div className="relative">
-           <Search className="absolute left-4 top-4 w-5 h-5 text-slate-400" />
-           <input 
-             type="text" 
-             placeholder="搜索症状、药品、备注..." 
-             value={searchTerm}
-             onChange={(e) => setSearchTerm(e.target.value)}
-             className="w-full pl-12 pr-4 py-3.5 bg-white border border-slate-200 rounded-2xl shadow-sm outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-300 transition-all"
-           />
-           {searchTerm && (
-             <button onClick={() => setSearchTerm('')} className="absolute right-4 top-4 text-slate-400 hover:text-slate-600">
-               <X className="w-5 h-5" />
-             </button>
-           )}
-         </div>
-       </div>
-
-       <h3 className="text-lg font-bold text-slate-800 mb-2 px-2">
-         {searchTerm ? `搜索结果 (${sortedLogs.length})` : '全部历史记录'}
-       </h3>
-       
-       {sortedLogs.length === 0 && (
-         <div className="text-center py-10 text-slate-400">
-           {searchTerm ? '没有找到相关记录' : '暂无记录'}
-         </div>
-       )}
-       
-       {sortedLogs.map(log => <LogItem key={log.id} log={log} onDelete={onDelete} />)}
     </div>
   );
 }
@@ -1116,7 +837,7 @@ function StatsView({ logs }) {
                  <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
                    <div className="bg-rose-400 h-full rounded-full" style={{ width: `${Math.min(100, (count / partStats[0][1]) * 100)}%` }}></div>
                  </div>
-               </div>
+               </div> 
              </div>
            ))}
         </div>
@@ -1125,125 +846,4 @@ function StatsView({ logs }) {
   );
 }
 
-// --- CourseDetailView 组件 (修复：删除白色背景) ---
-function CourseDetailView({ course, logs, onUpdateStatus, onDeleteLog }) {
-  if (!course) return <div>病程不存在</div>;
 
-  const isRecovered = course.status === 'recovered';
-  
-  const timelineData = useMemo(() => {
-    const grouped = {};
-    const start = safeDate(course.startDate);
-    start.setHours(0,0,0,0);
-
-    logs.forEach(log => {
-      const logDate = safeDate(log.timestamp);
-      logDate.setHours(0,0,0,0);
-      const diffTime = Math.abs(logDate - start);
-      const dayNum = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; 
-      
-      if (!grouped[dayNum]) grouped[dayNum] = [];
-      grouped[dayNum].push(log);
-    });
-    
-    return Object.keys(grouped).sort((a,b) => b - a).map(day => ({
-      day,
-      logs: grouped[day].sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp))
-    }));
-  }, [logs, course.startDate]);
-
-  return (
-    <div className="space-y-6 animate-fade-in pb-10">
-      <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm relative overflow-hidden">
-        <div className="flex justify-between items-start mb-6 relative z-10">
-           <div>
-             <h2 className="text-2xl font-bold text-slate-800">{course.name}</h2>
-             <span className={`inline-block mt-2 px-3 py-1 rounded-full text-xs font-bold ${isRecovered ? 'bg-green-100 text-green-600' : 'bg-indigo-100 text-indigo-600'}`}>
-               {isRecovered ? '已康复归档' : '正在进行治疗'}
-             </span>
-           </div>
-           {!isRecovered && (
-              <button 
-                onClick={(e) => {
-                  e.stopPropagation(); 
-                  if(window.confirm('确认已康复并结束此病程？')) {
-                      onUpdateStatus(course.id, 'recovered');
-                  }
-                }}
-                className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-full text-sm font-bold shadow-lg shadow-green-200 transition-colors flex items-center gap-2"
-              >
-                <CheckCircle2 className="w-4 h-4" /> 标记康复
-              </button>
-           )}
-        </div>
-
-        <div className="bg-slate-50 rounded-2xl p-5 space-y-4 border border-slate-100">
-           <div className="flex items-start gap-3">
-              <Clipboard className="w-4 h-4 text-slate-400 mt-1 shrink-0" />
-              <div>
-                 <span className="text-xs text-slate-400 block mb-1">症状综述</span>
-                 <p className="text-sm text-slate-700 leading-relaxed">{course.symptoms || '未填写'}</p>
-              </div>
-           </div>
-           
-           {course.hasDoctorVisit && (
-             <>
-               <div className="flex items-start gap-3 pt-4 border-t border-slate-200">
-                  <Stethoscope className="w-4 h-4 text-blue-500 mt-1 shrink-0" />
-                  <div className="flex-1">
-                     <span className="text-xs text-slate-400 block mb-1">就诊记录 ({course.department} {course.visitDate})</span>
-                     <p className="text-sm font-semibold text-slate-700">诊断：{course.diagnosis || '未填写'}</p>
-                     {course.prescription && (
-                       <div className="mt-3 bg-white p-3 rounded-xl border border-slate-200 text-xs text-slate-600 leading-relaxed">
-                         <span className="font-bold block mb-1 text-slate-700">处方/医嘱：</span>
-                         {course.prescription}
-                       </div>
-                     )}
-                  </div>
-               </div>
-             </>
-           )}
-        </div>
-        
-        <div className="grid grid-cols-2 gap-4 text-sm mt-4">
-           <div className="bg-slate-50 p-4 rounded-2xl">
-             <span className="text-slate-400 text-xs block mb-1">开始日期</span>
-             <span className="font-mono text-slate-700">{course.startDate}</span>
-           </div>
-           <div className="bg-slate-50 p-4 rounded-2xl">
-             <span className="text-slate-400 text-xs block mb-1">持续天数</span>
-             <span className="font-mono text-slate-700">
-               {isRecovered && course.endDate 
-                 ? Math.ceil((safeDate(course.endDate) - safeDate(course.startDate)) / (1000 * 60 * 60 * 24)) + 1 
-                 : getDaysSince(course.startDate)} 天
-             </span>
-           </div>
-        </div>
-      </div>
-
-      <div>
-        <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4 px-2">病程时间轴</h3>
-        <div className="space-y-8 relative pl-4 border-l-2 border-slate-100 ml-4">
-          {timelineData.length === 0 ? (
-            <p className="text-slate-400 text-sm pl-4">暂无记录，请添加不适或用药记录。</p>
-          ) : (
-            timelineData.map(({ day, logs }) => (
-              <div key={day} className="relative pl-6">
-                {/* 修复：移除了 bg-slate-50 */}
-                <div className="absolute -left-[29px] top-0 p-1">
-                  <div className="bg-indigo-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
-                    Day {day}
-                  </div>
-                </div>
-                
-                <div className="space-y-3">
-                  {logs.map(log => <LogItem key={log.id} log={log} onDelete={onDeleteLog} simple />)}
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
