@@ -1,0 +1,17 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 隐藏滚动条但保留滚动功能 */
+.scrollbar-hide::-webkit-scrollbar {
+    display: none;
+}
+.scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+body {
+  background-color: #f8fafc;
+  overscroll-behavior-y: none; /* 防止下拉刷新干扰 */
+}
