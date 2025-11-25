@@ -8,7 +8,7 @@ import {
   Trash2, 
   X, 
   ChevronLeft,
-  ChevronRight, // 👈 核心修复：补回了这个丢失的图标
+  ChevronRight, // ✅ 确保已引入
   Droplet, 
   Pill,    
   Syringe, 
@@ -20,15 +20,14 @@ import {
   Stethoscope, 
   Clipboard,
   BarChart3,
-  AlertTriangle,
+  AlertTriangle, // ✅ 确保已引入
   GitCommit,
   Search,
   Cloud,
   RefreshCw,
   History,
   LayoutDashboard,
-  Calendar,
-  MoreHorizontal
+  Calendar
 } from 'lucide-react';
 
 // --- 基础配置 ---
@@ -47,6 +46,7 @@ const safeDate = (dateInput) => {
   if (!dateInput) return new Date();
   if (dateInput instanceof Date) return dateInput;
   if (typeof dateInput === 'string') {
+    // 只有当包含 - 且不包含 T (非 ISO 时间戳) 时才替换
     if (dateInput.includes('-') && !dateInput.includes('T')) {
         return new Date(dateInput.replace(/-/g, '/'));
     }
@@ -808,7 +808,7 @@ function MedicationForm({ onSubmit, activeCourses }) {
   );
 }
 
-// ... (LogItem, HistoryView, SettingsView, StatsView) ...
+// ... (LogItem, HistoryView, SettingsView, StatsView 保持 V9.1 的逻辑) ...
 function LogItem({ log, onDelete, simple = false }) {
   const isSymptom = log.type === 'symptom';
   const isProgression = log.isProgression; 
@@ -1125,7 +1125,7 @@ function StatsView({ logs }) {
   );
 }
 
-// --- CourseDetailView 组件 (补全) ---
+// --- CourseDetailView 组件 (修复：删除白色背景) ---
 function CourseDetailView({ course, logs, onUpdateStatus, onDeleteLog }) {
   if (!course) return <div>病程不存在</div>;
 
@@ -1229,7 +1229,8 @@ function CourseDetailView({ course, logs, onUpdateStatus, onDeleteLog }) {
           ) : (
             timelineData.map(({ day, logs }) => (
               <div key={day} className="relative pl-6">
-                <div className="absolute -left-[29px] top-0 bg-slate-50 p-1">
+                {/* 修复：移除了 bg-slate-50 */}
+                <div className="absolute -left-[29px] top-0 p-1">
                   <div className="bg-indigo-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
                     Day {day}
                   </div>
@@ -1243,127 +1244,6 @@ function CourseDetailView({ course, logs, onUpdateStatus, onDeleteLog }) {
           )}
         </div>
       </div>
-    </div>
-  );
-}
-
-// --- NewCourseForm 组件 (补全) ---
-function NewCourseForm({ onSubmit }) {
-  const [data, setData] = useState({ 
-    name: '', 
-    startDate: new Date().toISOString().slice(0, 10), 
-    symptoms: '',
-    hasDoctorVisit: false,
-    visitDate: new Date().toISOString().slice(0, 10),
-    department: '',
-    diagnosis: '',
-    prescription: ''
-  });
-
-  return (
-    <div className="space-y-5 pb-10">
-      <div>
-        <label className="block text-sm font-semibold text-slate-700 mb-2">病程名称</label>
-        <input 
-          autoFocus
-          type="text" 
-          value={data.name}
-          onChange={(e) => setData({...data, name: e.target.value})}
-          placeholder="例如：2024冬季甲流、急性肠胃炎..." 
-          className="w-full p-4 bg-slate-50 border-0 rounded-2xl focus:ring-2 focus:ring-indigo-100 outline-none transition-all"
-        />
-      </div>
-
-      <div>
-         <label className="block text-sm font-semibold text-slate-700 mb-2">开始日期</label>
-         <input 
-           type="date" 
-           value={data.startDate}
-           onChange={(e) => setData({...data, startDate: e.target.value})}
-           className="w-full p-4 bg-slate-50 border-0 rounded-2xl focus:ring-2 focus:ring-indigo-100 outline-none transition-all"
-         />
-      </div>
-
-      <div>
-        <label className="block text-sm font-semibold text-slate-700 mb-2">主要症状描述</label>
-        <textarea 
-          value={data.symptoms}
-          onChange={(e) => setData({...data, symptoms: e.target.value})}
-          placeholder="发烧、咳嗽、全身酸痛..."
-          className="w-full p-4 bg-slate-50 border-0 rounded-2xl focus:ring-2 focus:ring-indigo-100 outline-none h-24 text-sm resize-none transition-all"
-        />
-      </div>
-
-      <div className="border-t border-slate-100 pt-4">
-        <div className="flex items-center gap-3 mb-4">
-          <input 
-             type="checkbox" 
-             id="doctorVisit" 
-             checked={data.hasDoctorVisit}
-             onChange={(e) => setData({...data, hasDoctorVisit: e.target.checked})}
-             className="w-5 h-5 accent-indigo-600 rounded"
-          />
-          <label htmlFor="doctorVisit" className="font-semibold text-slate-700 flex items-center gap-2">
-            <Stethoscope className="w-4 h-4 text-blue-500" />
-            是否就医？
-          </label>
-        </div>
-
-        {data.hasDoctorVisit && (
-          <div className="bg-blue-50/50 p-5 rounded-2xl space-y-4 animate-fade-in border border-blue-100">
-             <div>
-               <label className="block text-xs font-semibold text-slate-500 mb-1">就诊日期</label>
-               <input 
-                 type="date" 
-                 value={data.visitDate}
-                 onChange={(e) => setData({...data, visitDate: e.target.value})}
-                 className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm outline-none focus:border-blue-400"
-               />
-             </div>
-             <div className="grid grid-cols-2 gap-3">
-               <div>
-                  <label className="block text-xs font-semibold text-slate-500 mb-1">就诊科室</label>
-                  <input 
-                    type="text" 
-                    placeholder="如：呼吸内科"
-                    value={data.department}
-                    onChange={(e) => setData({...data, department: e.target.value})}
-                    className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm outline-none focus:border-blue-400"
-                  />
-               </div>
-               <div>
-                  <label className="block text-xs font-semibold text-slate-500 mb-1">医生诊断</label>
-                  <input 
-                    type="text" 
-                    placeholder="确诊结果"
-                    value={data.diagnosis}
-                    onChange={(e) => setData({...data, diagnosis: e.target.value})}
-                    className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm outline-none focus:border-blue-400"
-                  />
-               </div>
-             </div>
-             <div>
-                <label className="block text-xs font-semibold text-slate-500 mb-1">处方/医嘱/用药方案</label>
-                <textarea 
-                  placeholder="记录医生开的药或建议..."
-                  value={data.prescription}
-                  onChange={(e) => setData({...data, prescription: e.target.value})}
-                  className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm outline-none h-20 focus:border-blue-400 resize-none"
-                />
-             </div>
-          </div>
-        )}
-      </div>
-
-      <button 
-        onClick={() => {
-          if (!data.name) return alert('请输入名称');
-          onSubmit(data);
-        }}
-        className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-bold hover:bg-indigo-700 transition-transform active:scale-[0.98]"
-      >
-        开启病程档案
-      </button>
     </div>
   );
 }
