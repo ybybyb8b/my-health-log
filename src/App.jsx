@@ -83,6 +83,12 @@ const getDaysSince = (startDate) => {
   return diffDays + 1; 
 };
 
+// 获取当前本地时间字符串 (YYYY-MM-DDTHH:mm)
+const getCurrentLocalISOString = () => {
+  const now = new Date();
+  return new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
+};
+
 export default function App() {
   // --- State ---
   const [activeView, setActiveView] = useState('dashboard'); 
@@ -131,7 +137,7 @@ export default function App() {
   const handleAddLog = (newLog) => {
     const logEntry = {
       id: Date.now().toString(36),
-      timestamp: new Date().toISOString(),
+      timestamp: newLog.timestamp || new Date().toISOString(), // 优先使用传入的时间戳
       ...newLog
     };
     setLogs([logEntry, ...logs]);
@@ -851,7 +857,8 @@ function SymptomForm({ onSubmit, defaultParts, customParts, onAddPart, activeCou
     severity: 3,
     note: '',
     courseId: activeCourses.length > 0 ? activeCourses[0].id : '', // 默认选第一个
-    isProgression: false 
+    isProgression: false,
+    recordTime: getCurrentLocalISOString() // 默认为当前时间
   });
   const [newPart, setNewPart] = useState('');
   const [isAddingPart, setIsAddingPart] = useState(false);
@@ -982,10 +989,23 @@ function SymptomForm({ onSubmit, defaultParts, customParts, onAddPart, activeCou
         />
       </div>
 
+      {/* 新增：记录时间选择 */}
+      <div>
+        <label className="block text-sm font-semibold text-slate-700 mb-2">记录时间 (默认当前)</label>
+        <input 
+          type="datetime-local"
+          value={formData.recordTime}
+          onChange={(e) => setFormData({...formData, recordTime: e.target.value})}
+          className="w-full p-4 bg-slate-50 border-0 rounded-2xl focus:ring-2 focus:ring-indigo-100 outline-none text-sm"
+        />
+      </div>
+
       <button 
         onClick={() => {
           if(!formData.bodyPart) return alert('请选择部位');
-          onSubmit({ type: 'symptom', ...formData });
+          // 转换时间格式为 ISO 并提交
+          const timestamp = new Date(formData.recordTime).toISOString();
+          onSubmit({ type: 'symptom', ...formData, timestamp });
         }}
         className="w-full py-4 bg-slate-900 text-white rounded-2xl font-bold hover:bg-slate-800 transition-transform active:scale-[0.98]"
       >
@@ -1002,7 +1022,8 @@ function MedicationForm({ onSubmit, activeCourses }) {
     customMethod: '', 
     dosage: '',
     reason: '',
-    courseId: activeCourses.length > 0 ? activeCourses[0].id : ''
+    courseId: activeCourses.length > 0 ? activeCourses[0].id : '',
+    recordTime: getCurrentLocalISOString() // 默认为当前时间
   });
 
   return (
@@ -1105,6 +1126,17 @@ function MedicationForm({ onSubmit, activeCourses }) {
         </div>
       </div>
 
+      {/* 新增：记录时间选择 */}
+      <div>
+        <label className="block text-sm font-semibold text-slate-700 mb-2">用药时间 (默认当前)</label>
+        <input 
+          type="datetime-local"
+          value={formData.recordTime}
+          onChange={(e) => setFormData({...formData, recordTime: e.target.value})}
+          className="w-full p-4 bg-slate-50 border-0 rounded-2xl focus:ring-2 focus:ring-indigo-100 outline-none text-sm"
+        />
+      </div>
+
       <button 
         onClick={() => {
           if(!formData.name) return alert('请输入名称');
@@ -1113,7 +1145,9 @@ function MedicationForm({ onSubmit, activeCourses }) {
              if (!formData.customMethod) return alert('请输入具体方式');
              finalData.methodLabel = formData.customMethod;
           }
-          onSubmit({ type: 'medication', ...finalData });
+          // 转换时间格式为 ISO 并提交
+          const timestamp = new Date(formData.recordTime).toISOString();
+          onSubmit({ type: 'medication', ...finalData, timestamp });
         }}
         className="w-full py-4 bg-slate-900 text-white rounded-2xl font-bold hover:bg-slate-800 transition-transform active:scale-[0.98]"
       >
