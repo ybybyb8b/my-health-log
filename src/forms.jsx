@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Stethoscope, GitCommit, Plus, X } from 'lucide-react';
-import { getLocalTodayDate, toInputDateTime, MEDICATION_METHODS } from './utils';
+import { Stethoscope, GitCommit, Plus, X, Activity, Pill } from 'lucide-react';
+import { getLocalTodayDate, toInputDateTime, MEDICATION_METHODS } from './utils.jsx';
 
 export function NewCourseForm({ onSubmit }) {
   const [data, setData] = useState({ name: '', startDate: new Date().toISOString().slice(0, 10), symptoms: '', hasDoctorVisit: false, visitDate: new Date().toISOString().slice(0, 10), department: '', diagnosis: '', prescription: '' });
@@ -30,7 +30,10 @@ export function SymptomForm({ onSubmit, defaultParts, customParts, onAddPart, ac
   useEffect(() => {
     if (editingLog) {
         const datePart = new Date(editingLog.timestamp).toISOString().split('T')[0];
-        setFormData({ ...editingLog, recordDate: datePart });
+        setFormData({
+            ...editingLog,
+            recordDate: datePart
+        });
     } else {
         setFormData({
             bodyPart: '', severity: 3, note: '', 
@@ -92,6 +95,7 @@ export function SymptomForm({ onSubmit, defaultParts, customParts, onAddPart, ac
                const originalTime = new Date(editingLog.timestamp);
                finalDate.setHours(originalTime.getHours(), originalTime.getMinutes());
           }
+          
           const timestamp = finalDate.toISOString(); 
           onSubmit({ type: 'symptom', ...formData, timestamp }); 
       }} className="w-full py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl font-bold hover:bg-slate-800 dark:hover:bg-slate-100 transition-transform active:scale-[0.98]">{editingLog ? '更新记录' : '保存记录'}</button>
@@ -146,6 +150,7 @@ export function MedicationForm({ onSubmit, activeCourses, editingLog, customMeds
       <div>
         <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">药品/治疗名称</label>
         <input type="text" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="w-full p-4 bg-slate-50 dark:bg-slate-800 border-0 rounded-2xl focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900 outline-none transition-all text-slate-800 dark:text-white" placeholder="例如：奥司他韦..." />
+        {/* 智能联想标签 */}
         {customMeds && customMeds.length > 0 && (
           <div className="mt-3 flex flex-wrap gap-2 animate-fade-in">
             {customMeds.map(medName => (
