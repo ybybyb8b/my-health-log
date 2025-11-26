@@ -39,7 +39,7 @@ export class ErrorBoundary extends React.Component {
   }
 }
 
-// --- Views & Forms ---
+// --- Views ---
 
 export function CourseDetailView({ course, logs, onUpdateStatus, onDeleteLog, onEditLog }) {
   if (!course) return <div>病程不存在</div>;
@@ -158,6 +158,84 @@ export function HistoryView({ logs, courses = [], onDelete, onEdit, autoFocus = 
   );
 }
 
+export function SettingsView({ onExport, onImport, fileInputRef, handleImport, webdavConfig, setWebdavConfig, onSync }) {
+  const [showWebDav, setShowWebDav] = useState(false);
+  return (
+    <div className="space-y-6 animate-fade-in">
+      <div className="bg-indigo-600 rounded-[2rem] p-6 text-white shadow-xl shadow-indigo-200 dark:shadow-none"><h3 className="font-bold text-lg mb-2">数据管理</h3><p className="text-indigo-100 text-xs leading-relaxed mb-0">数据默认存储在本地浏览器。为了防止丢失，建议定期备份。</p></div>
+      <div className="bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden p-5">
+        <button onClick={() => setShowWebDav(!showWebDav)} className="w-full flex justify-between items-center mb-2"><div className="flex items-center gap-3 font-bold text-slate-700 dark:text-slate-200"><Cloud className="w-5 h-5 text-blue-500" /> WebDAV 云同步 (Beta)</div><ChevronRight className={`w-4 h-4 text-slate-300 transition-transform ${showWebDav ? 'rotate-90' : ''}`} /></button>
+        {showWebDav && <div className="mt-4 space-y-4 bg-slate-50 dark:bg-slate-800 p-5 rounded-2xl text-sm animate-fade-in"><div className="p-3 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 rounded-xl border border-amber-200 dark:border-amber-800 text-xs leading-relaxed">⚠️ 注意：浏览器由于安全策略(CORS)，可能无法直接连接网盘。</div><div><label className="block text-slate-500 dark:text-slate-400 mb-1.5 text-xs font-bold uppercase">服务器 URL</label><input type="text" value={webdavConfig.url} onChange={(e) => setWebdavConfig({...webdavConfig, url: e.target.value})} className="w-full p-3 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 rounded-xl outline-none focus:border-indigo-400 transition-colors text-slate-800 dark:text-slate-100" /></div><div><label className="block text-slate-500 dark:text-slate-400 mb-1.5 text-xs font-bold uppercase">账号</label><input type="text" value={webdavConfig.username} onChange={(e) => setWebdavConfig({...webdavConfig, username: e.target.value})} className="w-full p-3 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 rounded-xl outline-none focus:border-indigo-400 transition-colors text-slate-800 dark:text-slate-100" /></div><div><label className="block text-slate-500 dark:text-slate-400 mb-1.5 text-xs font-bold uppercase">密码</label><input type="password" value={webdavConfig.password} onChange={(e) => setWebdavConfig({...webdavConfig, password: e.target.value})} className="w-full p-3 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 rounded-xl outline-none focus:border-indigo-400 transition-colors text-slate-800 dark:text-slate-100" /></div><button onClick={onSync} className="w-full py-3 bg-blue-600 text-white rounded-xl flex items-center justify-center gap-2 hover:bg-blue-700 transition-colors font-bold"><RefreshCw className="w-4 h-4" /> 立即同步上传</button></div>}
+      </div>
+      <div className="bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden"><button onClick={onExport} className="w-full flex items-center justify-between p-5 hover:bg-slate-50 dark:hover:bg-slate-800 border-b border-slate-100 dark:border-slate-800 transition-colors"><span className="flex items-center gap-3 font-bold text-sm text-slate-700 dark:text-slate-200"><Download className="w-5 h-5 text-emerald-500"/> 导出备份 (JSON)</span><ChevronRight className="w-4 h-4 text-slate-300" /></button><button onClick={onImport} className="w-full flex items-center justify-between p-5 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"><span className="flex items-center gap-3 font-bold text-sm text-slate-700 dark:text-slate-200"><Upload className="w-5 h-5 text-amber-500"/> 恢复数据</span><ChevronRight className="w-4 h-4 text-slate-300" /></button><input type="file" ref={fileInputRef} onChange={handleImport} className="hidden" accept=".json"/></div>
+    </div>
+  );
+}
+
+export function StatsView({ logs }) {
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const calendarData = useMemo(() => {
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const daysInMonth = lastDay.getDate();
+    const startingDay = firstDay.getDay(); 
+    const blanks = Array(startingDay).fill(null);
+    const days = Array.from({length: daysInMonth}, (_, i) => i + 1);
+    const dayMap = {};
+    logs.forEach(log => {
+      const logDate = safeDate(log.timestamp);
+      if (logDate.getFullYear() === year && logDate.getMonth() === month) {
+        const day = logDate.getDate();
+        if (!dayMap[day]) dayMap[day] = { hasSymptom: false, hasMed: false };
+        if (log.type === 'symptom') dayMap[day].hasSymptom = true;
+        if (log.type === 'medication') dayMap[day].hasMed = true;
+      }
+    });
+    return { blanks, days, dayMap };
+  }, [currentDate, logs]);
+
+  const partStats = useMemo(() => {
+    const counts = {};
+    logs.filter(l => l.type === 'symptom').forEach(l => { counts[l.bodyPart] = (counts[l.bodyPart] || 0) + 1; });
+    return Object.entries(counts).sort((a,b) => b[1] - a[1]).slice(0, 5);
+  }, [logs]);
+
+  const changeMonth = (offset) => { const newDate = new Date(currentDate); newDate.setMonth(newDate.getMonth() + offset); setCurrentDate(newDate); };
+
+  return (
+    <div className="space-y-6 animate-fade-in pb-10">
+      <div className="bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-100 dark:border-slate-800 shadow-sm p-6">
+        <div className="flex justify-between items-center mb-6">
+          <h3 className="font-bold text-slate-800 dark:text-white text-lg">{currentDate.getFullYear()}年 {currentDate.getMonth() + 1}月</h3>
+          <div className="flex gap-2"><button onClick={() => changeMonth(-1)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors"><ChevronLeft className="w-5 h-5 text-slate-600 dark:text-slate-400"/></button><button onClick={() => changeMonth(1)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors"><ChevronRight className="w-5 h-5 text-slate-600 dark:text-slate-400"/></button></div>
+        </div>
+        <div className="grid grid-cols-7 gap-2 text-center mb-2">{['日','一','二','三','四','五','六'].map(d => <span key={d} className="text-xs font-medium text-slate-400 dark:text-slate-500">{d}</span>)}</div>
+        <div className="grid grid-cols-7 gap-2">
+          {calendarData.blanks.map((_, i) => <div key={`blank-${i}`} className="h-10"></div>)}
+          {calendarData.days.map(day => {
+             const status = calendarData.dayMap[day];
+             let bgClass = "bg-slate-50 dark:bg-slate-800";
+             let textClass = "text-slate-400 dark:text-slate-500";
+             let borderClass = "border-transparent";
+             if (status) {
+               if (status.hasSymptom && status.hasMed) { bgClass = "bg-purple-100 dark:bg-purple-900/30"; textClass = "text-purple-700 dark:text-purple-300 font-bold"; borderClass = "border-purple-200 dark:border-purple-800"; } 
+               else if (status.hasSymptom) { bgClass = "bg-rose-100 dark:bg-rose-900/30"; textClass = "text-rose-700 dark:text-rose-300 font-bold"; borderClass = "border-rose-200 dark:border-rose-800"; } 
+               else if (status.hasMed) { bgClass = "bg-indigo-100 dark:bg-indigo-900/30"; textClass = "text-indigo-700 dark:text-indigo-300 font-bold"; borderClass = "border-indigo-200 dark:border-indigo-800"; }
+             }
+             return <div key={day} className={`h-10 rounded-xl flex items-center justify-center text-sm border ${bgClass} ${textClass} ${borderClass}`}>{day}</div>;
+          })}
+        </div>
+      </div>
+      <div className="bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-100 dark:border-slate-800 shadow-sm p-6">
+        <h3 className="font-bold text-slate-800 dark:text-white mb-6 flex items-center gap-2"><Activity className="w-5 h-5 text-rose-500" /> 高频不适部位</h3>
+        <div className="space-y-4">{partStats.length === 0 ? <p className="text-sm text-slate-400">暂无数据</p> : partStats.map(([part, count], index) => (<div key={part} className="flex items-center gap-4"><span className="text-xs font-mono text-slate-400 w-4">{index+1}</span><div className="flex-1"><div className="flex justify-between text-sm mb-2"><span className="font-medium text-slate-700 dark:text-slate-300">{part}</span><span className="text-slate-500 dark:text-slate-400 font-medium">{count}次</span></div><div className="w-full bg-slate-100 dark:bg-slate-800 h-2.5 rounded-full overflow-hidden"><div className="bg-rose-400 h-full rounded-full" style={{ width: `${Math.min(100, (count / partStats[0][1]) * 100)}%` }}></div></div></div></div>))}</div>
+      </div>
+    </div>
+  );
+}
+
 export function NewCourseForm({ onSubmit }) {
   const [data, setData] = useState({ name: '', startDate: new Date().toISOString().slice(0, 10), symptoms: '', hasDoctorVisit: false, visitDate: new Date().toISOString().slice(0, 10), department: '', diagnosis: '', prescription: '' });
   return (
@@ -172,7 +250,6 @@ export function NewCourseForm({ onSubmit }) {
 }
 
 export function SymptomForm({ onSubmit, defaultParts, customParts, onAddPart, activeCourses, editingLog }) {
-  // 修复：移除重复的 recordDate 定义
   const [formData, setFormData] = useState(() => {
     const initialDate = editingLog ? toInputDateTime(editingLog.timestamp).split('T')[0] : getLocalTodayDate();
     return {
@@ -184,9 +261,25 @@ export function SymptomForm({ onSubmit, defaultParts, customParts, onAddPart, ac
     };
   });
 
-  // ... rest of the component code is same as provided in previous turn ...
-  // 为了节省篇幅，这里只展示修正后的 useState 初始化
-  
+  // Sync form data when editingLog changes
+  useEffect(() => {
+    if (editingLog) {
+        const datePart = new Date(editingLog.timestamp).toISOString().split('T')[0];
+        setFormData({
+            ...editingLog,
+            recordDate: datePart
+        });
+    } else {
+        // Reset to defaults if not editing
+        setFormData({
+            bodyPart: '', severity: 3, note: '', 
+            courseId: activeCourses.length > 0 ? activeCourses[0].id : '', 
+            isProgression: false, 
+            recordDate: getLocalTodayDate()
+        });
+    }
+  }, [editingLog, activeCourses]);
+
   const [newPart, setNewPart] = useState('');
   const [isAddingPart, setIsAddingPart] = useState(false);
   const handleAddPart = () => { if (onAddPart(newPart)) { setFormData({...formData, bodyPart: newPart}); setIsAddingPart(false); setNewPart(''); } else { alert('无效或已存在'); } };
@@ -238,6 +331,7 @@ export function SymptomForm({ onSubmit, defaultParts, customParts, onAddPart, ac
                const originalTime = new Date(editingLog.timestamp);
                finalDate.setHours(originalTime.getHours(), originalTime.getMinutes());
           }
+          
           const timestamp = finalDate.toISOString(); 
           onSubmit({ type: 'symptom', ...formData, timestamp }); 
       }} className="w-full py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl font-bold hover:bg-slate-800 dark:hover:bg-slate-100 transition-transform active:scale-[0.98]">{editingLog ? '更新记录' : '保存记录'}</button>
@@ -255,9 +349,20 @@ export function MedicationForm({ onSubmit, activeCourses, editingLog }) {
         recordDate: initialDate
     };
   });
-
-  // ... rest of MedicationForm logic (same as SymptomForm for state update) ...
   
+  useEffect(() => {
+    if (editingLog) {
+        const datePart = new Date(editingLog.timestamp).toISOString().split('T')[0];
+        setFormData({ ...editingLog, recordDate: datePart });
+    } else {
+        setFormData({ 
+            name: '', method: 'oral', customMethod: '', dosage: '', reason: '', 
+            courseId: activeCourses.length > 0 ? activeCourses[0].id : '', 
+            recordDate: getLocalTodayDate() 
+        });
+    }
+  }, [editingLog, activeCourses]);
+
   return (
     <div className="space-y-6">
       {activeCourses.length > 0 && (
