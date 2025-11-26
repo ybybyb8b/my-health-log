@@ -1,3 +1,4 @@
+import React from 'react';
 import { Pill, Droplet, Syringe, Wind, FileText } from 'lucide-react';
 
 // --- 基础配置 ---
@@ -13,6 +14,7 @@ export const MEDICATION_METHODS = [
 
 // --- 工具函数 ---
 
+// iOS 安全日期转换
 export const safeDate = (dateInput) => {
   if (!dateInput) return new Date();
   if (dateInput instanceof Date) return dateInput;
@@ -86,16 +88,4 @@ export const isToday = (isoString) => {
     return date.getDate() === today.getDate() &&
            date.getMonth() === today.getMonth() &&
            date.getFullYear() === today.getFullYear();
-};
-
-export const safeParseArray = (key) => {
-  try {
-    const item = localStorage.getItem(key);
-    if (!item) return [];
-    const parsed = JSON.parse(item);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch (e) {
-    console.error(`Error parsing ${key}:`, e);
-    return [];
-  }
 };
