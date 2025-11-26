@@ -2,7 +2,7 @@ import React from 'react';
 import { Pill, Droplet, Syringe, Wind, FileText } from 'lucide-react';
 
 // --- 基础配置 ---
-export const DEFAULT_BODY_PARTS = ['头部', '呼吸道', '心脏', '胃肠', '皮肤', '关节', '肌肉', '睡眠/精神', '体温'];
+export const DEFAULT_BODY_PARTS = ['头部', '眼部', '呼吸道', '心脏', '胃肠', '皮肤', '关节', '肌肉', '睡眠/精神', '体温'];
 
 export const MEDICATION_METHODS = [
   { id: 'oral', label: '口服', icon: <Pill className="w-4 h-4"/> },
@@ -13,7 +13,6 @@ export const MEDICATION_METHODS = [
 ];
 
 // --- 工具函数 ---
-
 export const safeDate = (dateInput) => {
   if (!dateInput) return new Date();
   if (dateInput instanceof Date) return dateInput;
