@@ -89,3 +89,15 @@ export const isToday = (isoString) => {
            date.getMonth() === today.getMonth() &&
            date.getFullYear() === today.getFullYear();
 };
+
+export const safeParseArray = (key) => {
+  try {
+    const item = localStorage.getItem(key);
+    if (!item) return [];
+    const parsed = JSON.parse(item);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (e) {
+    console.error(`Error parsing ${key}:`, e);
+    return [];
+  }
+};
