@@ -405,7 +405,7 @@ function HealthLogMain() {
   );
 }
 
-// --- 包装组件 ---
+// --- 包装组件，挂载 ErrorBoundary ---
 export default function App() {
   return (
     <ErrorBoundary>
