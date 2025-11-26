@@ -18,17 +18,17 @@ import {
   ArrowUpDown
 } from 'lucide-react';
 
-// 1. 引入工具箱
+// 1. 引入工具箱 (显式 .jsx)
 import { 
   safeParseArray, formatDateOnly, getDaysSince, isToday, formatTimeOnly, 
   MEDICATION_METHODS, DEFAULT_BODY_PARTS 
-} from './utils';
+} from './utils.jsx';
 
-// 2. 引入组件库
+// 2. 引入组件库 (显式 .jsx)
 import { 
   ErrorBoundary, CourseDetailView, HistoryView, StatsView, SettingsView, 
   NewCourseForm, SymptomForm, MedicationForm, LogItem 
-} from './components';
+} from './components.jsx';
 
 // --- 主应用逻辑 (瘦身版) ---
 function HealthLogMain() {
@@ -38,6 +38,9 @@ function HealthLogMain() {
   const [logs, setLogs] = useState([]);
   const [courses, setCourses] = useState([]); 
   const [customParts, setCustomParts] = useState([]);
+  
+  // 新增：常用药列表状态
+  const [customMeds, setCustomMeds] = useState([]);
   
   const [webdavConfig, setWebdavConfig] = useState({ url: '', username: '', password: '', enabled: false });
   
@@ -56,6 +59,9 @@ function HealthLogMain() {
     setLogs(safeParseArray('hl_logs'));
     setCourses(safeParseArray('hl_courses'));
     setCustomParts(safeParseArray('hl_custom_parts'));
+    // 加载常用药
+    setCustomMeds(safeParseArray('hl_custom_meds'));
+    
     try {
       const savedWebdav = localStorage.getItem('hl_webdav');
       if (savedWebdav) setWebdavConfig(JSON.parse(savedWebdav));
@@ -66,11 +72,18 @@ function HealthLogMain() {
   useEffect(() => { localStorage.setItem('hl_logs', JSON.stringify(logs)); }, [logs]);
   useEffect(() => { localStorage.setItem('hl_custom_parts', JSON.stringify(customParts)); }, [customParts]);
   useEffect(() => { localStorage.setItem('hl_courses', JSON.stringify(courses)); }, [courses]);
+  useEffect(() => { localStorage.setItem('hl_custom_meds', JSON.stringify(customMeds)); }, [customMeds]); // 保存常用药
   useEffect(() => { localStorage.setItem('hl_webdav', JSON.stringify(webdavConfig)); }, [webdavConfig]);
 
   const handleAddLog = (newLog) => {
     const logEntry = { id: Date.now().toString(36), timestamp: newLog.timestamp || new Date().toISOString(), ...newLog };
     setLogs([logEntry, ...logs]);
+    
+    // 如果是药物记录，自动添加到常用药列表
+    if (newLog.type === 'medication' && newLog.name) {
+      handleAddCustomMed(newLog.name);
+    }
+
     setIsModalOpen(false);
     setIsFabOpen(false); 
     setEditingLog(null);
@@ -78,8 +91,29 @@ function HealthLogMain() {
 
   const handleUpdateLog = (updatedLog) => {
     setLogs(logs.map(log => log.id === updatedLog.id ? { ...log, ...updatedLog } : log));
+    
+    // 编辑时也更新常用药
+    if (updatedLog.type === 'medication' && updatedLog.name) {
+      handleAddCustomMed(updatedLog.name);
+    }
+    
     setIsModalOpen(false);
     setEditingLog(null);
+  };
+
+  // 新增：添加常用药逻辑 (去重)
+  const handleAddCustomMed = (medName) => {
+    const trimmedName = medName.trim();
+    if (trimmedName && !customMeds.includes(trimmedName)) {
+      setCustomMeds(prev => [trimmedName, ...prev].slice(0, 20)); // 保留最近20个
+    }
+  };
+
+  // 新增：删除常用药逻辑
+  const handleDeleteCustomMed = (medName) => {
+    if (window.confirm(`确定要从常用列表中移除 "${medName}" 吗？`)) {
+      setCustomMeds(prev => prev.filter(m => m !== medName));
+    }
   };
 
   const handleEditLog = (log) => {
@@ -146,7 +180,7 @@ function HealthLogMain() {
   }, [logs]);
 
   const exportData = () => {
-    const dataStr = JSON.stringify({ logs, customParts, courses }, null, 2);
+    const dataStr = JSON.stringify({ logs, customParts, courses, customMeds }, null, 2); // 导出时包含 customMeds
     const blob = new Blob([dataStr], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -165,6 +199,7 @@ function HealthLogMain() {
         if (Array.isArray(data.logs)) setLogs(data.logs);
         if (Array.isArray(data.customParts)) setCustomParts(data.customParts);
         if (Array.isArray(data.courses)) setCourses(data.courses);
+        if (Array.isArray(data.customMeds)) setCustomMeds(data.customMeds); // 导入时恢复
         alert('数据恢复成功！');
       } catch (err) { alert('文件格式错误'); }
     };
@@ -238,7 +273,7 @@ function HealthLogMain() {
                </div>
             </div>
 
-            {/* 2. 进行中的病程 */}
+            {/* 2. 进行中的病程 (竖向平铺 + 排序) */}
             <div>
                <div className="flex justify-between items-center mb-3 px-1">
                  <div className="flex items-center gap-2">
@@ -395,8 +430,24 @@ function HealthLogMain() {
             </div>
             <div className="flex-1 overflow-y-auto p-6">
               {modalType === 'newCourse' && <NewCourseForm onSubmit={handleAddCourse} />}
-              {modalType === 'symptom' && <SymptomForm onSubmit={editingLog ? handleUpdateLog : handleAddLog} defaultParts={DEFAULT_BODY_PARTS} customParts={customParts} onAddPart={handleAddCustomPart} activeCourses={activeCourses} editingLog={editingLog} />}
-              {modalType === 'medication' && <MedicationForm onSubmit={editingLog ? handleUpdateLog : handleAddLog} activeCourses={activeCourses} editingLog={editingLog} />}
+              
+              {/* 关键：将 customMeds 和 deleteCustomMed 传递给表单 */}
+              {modalType === 'symptom' && <SymptomForm 
+                onSubmit={editingLog ? handleUpdateLog : handleAddLog} 
+                defaultParts={DEFAULT_BODY_PARTS} 
+                customParts={customParts} 
+                onAddPart={handleAddCustomPart} 
+                activeCourses={activeCourses} 
+                editingLog={editingLog} 
+              />}
+              
+              {modalType === 'medication' && <MedicationForm 
+                onSubmit={editingLog ? handleUpdateLog : handleAddLog} 
+                activeCourses={activeCourses} 
+                editingLog={editingLog} 
+                customMeds={customMeds}               // 👈 传入常用药列表
+                onDeleteCustomMed={handleDeleteCustomMed} // 👈 传入删除方法
+              />}
             </div>
           </div>
         </div>
