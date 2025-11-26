@@ -3,10 +3,11 @@ import {
   Activity, Pill, ChevronLeft, ChevronRight, CheckCircle2, Stethoscope, Clipboard, BarChart3,
   Search, Cloud, RefreshCw, Download, Upload, History, Home, LayoutDashboard, BookOpen, ArrowUpDown, X
 } from 'lucide-react';
+// 显式引入 .jsx
 import { 
   formatDate, getDaysSince, safeDate, formatTimeOnly, MEDICATION_METHODS 
-} from './utils';
-import { LogItem } from './components';
+} from './utils.jsx';
+import { LogItem } from './components.jsx';
 
 export function CourseDetailView({ course, logs, onUpdateStatus, onDeleteLog, onEditLog }) {
   if (!course) return <div>病程不存在</div>;
