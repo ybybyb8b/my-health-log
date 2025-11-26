@@ -1,17 +1,14 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   Activity, Pill, ChevronLeft, ChevronRight, CheckCircle2, Stethoscope, Clipboard, BarChart3,
-  Search, Cloud, RefreshCw, Download, Upload, History, Home, LayoutDashboard, BookOpen, ArrowUpDown, X,
-  Pencil
+  Search, Cloud, RefreshCw, Download, Upload, History, Home, LayoutDashboard, BookOpen, ArrowUpDown, X
 } from 'lucide-react';
 // 显式引入 .jsx
 import { 
   formatDate, getDaysSince, safeDate, formatTimeOnly, MEDICATION_METHODS 
 } from './utils.jsx';
-// 引入通用组件 (LogItem 在这里引用，不在本文件定义)
 import { LogItem } from './components.jsx';
 
-// --- 1. 详情页视图 ---
 export function CourseDetailView({ course, logs, onUpdateStatus, onDeleteLog, onEditLog }) {
   if (!course) return <div>病程不存在</div>;
   const isRecovered = course.status === 'recovered';
@@ -66,7 +63,6 @@ export function CourseDetailView({ course, logs, onUpdateStatus, onDeleteLog, on
   );
 }
 
-// --- 2. 历史记录视图 ---
 export function HistoryView({ logs, courses = [], onDelete, onEdit, autoFocus = false }) {
   const [searchTerm, setSearchTerm] = useState('');
   const inputRef = useRef(null);
@@ -104,7 +100,6 @@ export function HistoryView({ logs, courses = [], onDelete, onEdit, autoFocus = 
   );
 }
 
-// --- 3. 设置视图 ---
 export function SettingsView({ onExport, onImport, fileInputRef, handleImport, webdavConfig, setWebdavConfig, onSync }) {
   const [showWebDav, setShowWebDav] = useState(false);
   return (
@@ -119,7 +114,6 @@ export function SettingsView({ onExport, onImport, fileInputRef, handleImport, w
   );
 }
 
-// --- 4. 统计视图 ---
 export function StatsView({ logs }) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const calendarData = useMemo(() => {
