@@ -38,7 +38,7 @@ import {
   NewCourseForm, SymptomForm, MedicationForm 
 } from './forms.jsx';
 
-// --- 主应用逻辑 (瘦身版) ---
+// --- 主应用逻辑 ---
 function HealthLogMain() {
   const [activeView, setActiveView] = useState('dashboard'); 
   const [viewParams, setViewParams] = useState({}); 
@@ -82,10 +82,10 @@ function HealthLogMain() {
   useEffect(() => { localStorage.setItem('hl_webdav', JSON.stringify(webdavConfig)); }, [webdavConfig]);
 
   const handleAddLog = (newLog) => {
-    const logEntry = { id: Date.now().toString(36), timestamp: newLog.timestamp || new Date().toISOString(), ...newLog };
+    const logEntry = { id: Date.now().toString(36), timestamp: newNewLog.timestamp || new Date().toISOString(), ...newLog };
     setLogs([logEntry, ...logs]);
     
-    if (newLog.type === 'medication' && newLog.name) {
+    if (newLog.type === 'medication' && newNewLog.name) {
       handleAddCustomMed(newNewLog.name);
     }
 
@@ -454,5 +454,14 @@ function HealthLogMain() {
         </div>
       )}
     </div>
+  );
+}
+
+// --- 包装组件，挂载 ErrorBoundary ---
+export default function App() {
+  return (
+    <ErrorBoundary>
+      <HealthLogMain />
+    </ErrorBoundary>
   );
 }
