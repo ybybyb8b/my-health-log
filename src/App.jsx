@@ -26,7 +26,7 @@ import {
   Cloud,
   RefreshCw,
   History,
-  LayoutDashboard,
+  Home, // ✅ 替换回最稳妥的 Home 图标
   Calendar
 } from 'lucide-react';
 
@@ -91,6 +91,19 @@ const getLocalTodayDate = () => {
   return `${year}-${month}-${day}`;
 };
 
+// --- 数据安全读取 (防止白屏的核心) ---
+const safeParseArray = (key) => {
+  try {
+    const item = localStorage.getItem(key);
+    if (!item) return [];
+    const parsed = JSON.parse(item);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (e) {
+    console.error(`Error parsing ${key}:`, e);
+    return [];
+  }
+};
+
 export default function App() {
   // --- State ---
   const [activeView, setActiveView] = useState('dashboard'); 
@@ -116,21 +129,16 @@ export default function App() {
   
   const fileInputRef = useRef(null);
 
-  // --- Effects ---
+  // --- Effects: 增加数据读取的健壮性 ---
   useEffect(() => {
+    setLogs(safeParseArray('hl_logs'));
+    setCourses(safeParseArray('hl_courses'));
+    setCustomParts(safeParseArray('hl_custom_parts'));
+    
     try {
-      const savedLogs = localStorage.getItem('hl_logs');
-      const savedParts = localStorage.getItem('hl_custom_parts');
-      const savedCourses = localStorage.getItem('hl_courses');
       const savedWebdav = localStorage.getItem('hl_webdav');
-      
-      if (savedLogs) setLogs(JSON.parse(savedLogs));
-      if (savedParts) setCustomParts(JSON.parse(savedParts));
-      if (savedCourses) setCourses(JSON.parse(savedCourses));
       if (savedWebdav) setWebdavConfig(JSON.parse(savedWebdav));
-    } catch (e) {
-      console.error("读取缓存失败", e);
-    }
+    } catch (e) {}
   }, []);
 
   useEffect(() => { localStorage.setItem('hl_logs', JSON.stringify(logs)); }, [logs]);
@@ -196,15 +204,15 @@ export default function App() {
     setActiveView('courseDetail');
   };
 
-  // 顶部搜索按钮点击事件
   const handleGlobalSearch = () => {
     setActiveView('history');
     setAutoFocusSearch(true);
-    // 重置 focus 状态，以便下次点击还能触发
     setTimeout(() => setAutoFocusSearch(false), 500);
   };
 
-  const activeCourses = useMemo(() => courses.filter(c => c.status === 'active'), [courses]);
+  // 防御性检查: 确保 courses 是数组
+  const safeCourses = Array.isArray(courses) ? courses : [];
+  const activeCourses = useMemo(() => safeCourses.filter(c => c.status === 'active'), [safeCourses]);
 
   const stats = useMemo(() => {
     const symptomLogs = logs.filter(l => l.type === 'symptom');
@@ -229,9 +237,9 @@ export default function App() {
     reader.onload = (e) => {
       try {
         const data = JSON.parse(e.target.result);
-        if (data.logs) setLogs(data.logs);
-        if (data.customParts) setCustomParts(data.customParts);
-        if (data.courses) setCourses(data.courses);
+        if (Array.isArray(data.logs)) setLogs(data.logs);
+        if (Array.isArray(data.customParts)) setCustomParts(data.customParts);
+        if (Array.isArray(data.courses)) setCourses(data.courses);
         alert('数据恢复成功！');
       } catch (err) { alert('文件格式错误'); }
     };
@@ -259,18 +267,10 @@ export default function App() {
         )}
         
         <div className="flex items-center gap-2">
-          {/* 全局搜索按钮 */}
-          <button 
-            onClick={handleGlobalSearch}
-            className="p-2.5 rounded-full text-slate-400 hover:bg-slate-50 active:bg-slate-100 transition-all"
-          >
+          <button onClick={handleGlobalSearch} className="p-2.5 rounded-full text-slate-400 hover:bg-slate-50 active:bg-slate-100 transition-all">
             <Search className="w-6 h-6" strokeWidth={2} />
           </button>
-
-          <button 
-            onClick={() => setActiveView(activeView === 'settings' ? 'dashboard' : 'settings')}
-            className={`p-2.5 rounded-full transition-all active:scale-95 ${activeView === 'settings' ? 'bg-slate-100 text-slate-900' : 'text-slate-400 hover:bg-slate-50'}`}
-          >
+          <button onClick={() => setActiveView(activeView === 'settings' ? 'dashboard' : 'settings')} className={`p-2.5 rounded-full transition-all active:scale-95 ${activeView === 'settings' ? 'bg-slate-100 text-slate-900' : 'text-slate-400 hover:bg-slate-50'}`}>
             <Settings className="w-6 h-6" strokeWidth={2} />
           </button>
         </div>
@@ -289,12 +289,11 @@ export default function App() {
              onSync={handleWebDavSync}
            />
         )}
-        {/* 传入 courses 和 autoFocus 状态 */}
         {activeView === 'history' && <HistoryView logs={logs} courses={courses} onDelete={handleDeleteLog} autoFocus={autoFocusSearch} />}
         {activeView === 'stats' && <StatsView logs={logs} />}
         {activeView === 'courseDetail' && (
           <CourseDetailView 
-            course={courses.find(c => c.id === viewParams.courseId)} 
+            course={safeCourses.find(c => c.id === viewParams.courseId)} 
             logs={logs.filter(l => l.courseId === viewParams.courseId)}
             onUpdateStatus={handleUpdateCourseStatus}
             onDeleteLog={handleDeleteLog}
@@ -399,7 +398,7 @@ export default function App() {
               className={`flex-1 h-full rounded-[2rem] flex flex-col items-center justify-center gap-1 transition-all duration-300 relative z-10 ${activeView === 'dashboard' ? 'text-white font-semibold' : 'text-gray-500 hover:text-gray-300'}`}
             >
               {activeView === 'dashboard' && <div className="absolute inset-0 bg-blue-600 rounded-[2rem] shadow-lg -z-10 animate-fade-in" />}
-              <LayoutDashboard className="w-6 h-6" strokeWidth={activeView === 'dashboard' ? 2.5 : 2} />
+              <Home className="w-6 h-6" strokeWidth={activeView === 'dashboard' ? 2.5 : 2} />
               <span className="text-[10px] tracking-wide">概览</span>
             </button>
             <button 
@@ -507,7 +506,7 @@ export default function App() {
   );
 }
 
-// --- HistoryView 组件 (升级版：支持搜索 Courses 和 日期) ---
+// --- HistoryView 组件 ---
 function HistoryView({ logs, courses = [], onDelete, autoFocus = false }) {
   const [searchTerm, setSearchTerm] = useState('');
   const inputRef = useRef(null);
@@ -586,8 +585,7 @@ function HistoryView({ logs, courses = [], onDelete, autoFocus = false }) {
   );
 }
 
-// ... (LogItem, SettingsView, StatsView 等其他组件保持 V10 极简版逻辑) ...
-// (为了完整性，这里复用之前的 LogItem)
+// --- Common Components (LogItem) ---
 function LogItem({ log, onDelete, simple = false }) {
   const isSymptom = log.type === 'symptom';
   const isProgression = log.isProgression; 
@@ -630,6 +628,8 @@ function LogItem({ log, onDelete, simple = false }) {
           <p className="text-sm text-slate-500 leading-snug break-all">
             {isSymptom ? (log.note || '') : `${log.dosage} ${log.reason ? `• ${log.reason}` : ''}`}
           </p>
+          
+          {/* --- 核心修复：简单模式(时间轴)下完全移除时间显示，普通模式下只显示日期 --- */}
           {!simple && (
             <p className="text-xs text-slate-400 mt-2 font-mono">
               {formatDate(log.timestamp)}
@@ -645,205 +645,124 @@ function LogItem({ log, onDelete, simple = false }) {
   );
 }
 
-function SettingsView({ onExport, onImport, fileInputRef, handleImport, webdavConfig, setWebdavConfig, onSync }) {
-  const [showWebDav, setShowWebDav] = useState(false);
+// --- CourseDetailView ---
+function CourseDetailView({ course, logs, onUpdateStatus, onDeleteLog }) {
+  if (!course) return <div>病程不存在</div>;
 
-  return (
-    <div className="space-y-6 animate-fade-in">
-      <div className="bg-indigo-600 rounded-[2rem] p-6 text-white shadow-xl shadow-indigo-200">
-        <h3 className="font-bold text-lg mb-2">数据管理</h3>
-        <p className="text-indigo-100 text-xs leading-relaxed mb-0">
-          数据默认存储在本地浏览器。为了防止丢失，建议定期备份。
-        </p>
-      </div>
+  const isRecovered = course.status === 'recovered';
+  
+  const timelineData = useMemo(() => {
+    const grouped = {};
+    const start = safeDate(course.startDate);
+    start.setHours(0,0,0,0);
 
-      <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden p-5">
-        <button 
-          onClick={() => setShowWebDav(!showWebDav)} 
-          className="w-full flex justify-between items-center mb-2"
-        >
-          <div className="flex items-center gap-3 font-bold text-slate-700">
-            <Cloud className="w-5 h-5 text-blue-500" /> WebDAV 云同步 (Beta)
-          </div>
-          <ChevronRight className={`w-4 h-4 text-slate-300 transition-transform ${showWebDav ? 'rotate-90' : ''}`} />
-        </button>
-        
-        {showWebDav && (
-          <div className="mt-4 space-y-4 bg-slate-50 p-5 rounded-2xl text-sm animate-fade-in">
-             <div className="p-3 bg-amber-50 text-amber-700 rounded-xl border border-amber-200 text-xs leading-relaxed">
-                ⚠️ 注意：浏览器由于安全策略(CORS)，直接连接坚果云/Nextcloud可能会失败。建议将此应用安装为 PWA 或使用原生 App 壳运行。
-             </div>
-             <div>
-               <label className="block text-slate-500 mb-1.5 text-xs font-bold uppercase">服务器 URL</label>
-               <input 
-                 type="text" 
-                 placeholder="https://dav.jianguoyun.com/dav/"
-                 value={webdavConfig.url}
-                 onChange={(e) => setWebdavConfig({...webdavConfig, url: e.target.value})}
-                 className="w-full p-3 border border-slate-200 rounded-xl outline-none focus:border-indigo-400 transition-colors"
-               />
-             </div>
-             <div>
-               <label className="block text-slate-500 mb-1.5 text-xs font-bold uppercase">账号 (Email)</label>
-               <input 
-                 type="text" 
-                 value={webdavConfig.username}
-                 onChange={(e) => setWebdavConfig({...webdavConfig, username: e.target.value})}
-                 className="w-full p-3 border border-slate-200 rounded-xl outline-none focus:border-indigo-400 transition-colors"
-               />
-             </div>
-             <div>
-               <label className="block text-slate-500 mb-1.5 text-xs font-bold uppercase">应用密码</label>
-               <input 
-                 type="password" 
-                 value={webdavConfig.password}
-                 onChange={(e) => setWebdavConfig({...webdavConfig, password: e.target.value})}
-                 className="w-full p-3 border border-slate-200 rounded-xl outline-none focus:border-indigo-400 transition-colors"
-               />
-             </div>
-             <button 
-               onClick={onSync}
-               className="w-full py-3 bg-blue-600 text-white rounded-xl flex items-center justify-center gap-2 hover:bg-blue-700 transition-colors font-bold"
-             >
-               <RefreshCw className="w-4 h-4" /> 立即同步上传
-             </button>
-          </div>
-        )}
-      </div>
-
-      <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden">
-        <button onClick={onExport} className="w-full flex items-center justify-between p-5 hover:bg-slate-50 border-b border-slate-100 transition-colors">
-          <span className="flex items-center gap-3 font-bold text-sm text-slate-700"><Download className="w-5 h-5 text-emerald-500"/> 导出备份 (JSON)</span>
-          <ChevronRight className="w-4 h-4 text-slate-300" />
-        </button>
-        <button onClick={onImport} className="w-full flex items-center justify-between p-5 hover:bg-slate-50 transition-colors">
-          <span className="flex items-center gap-3 font-bold text-sm text-slate-700"><Upload className="w-5 h-5 text-amber-500"/> 恢复数据</span>
-          <ChevronRight className="w-4 h-4 text-slate-300" />
-        </button>
-        <input type="file" ref={fileInputRef} onChange={handleImport} className="hidden" accept=".json"/>
-      </div>
-    </div>
-  );
-}
-
-function StatsView({ logs }) {
-  const [currentDate, setCurrentDate] = useState(new Date());
-
-  const calendarData = useMemo(() => {
-    const year = currentDate.getFullYear();
-    const month = currentDate.getMonth();
-    const firstDay = new Date(year, month, 1);
-    const lastDay = new Date(year, month + 1, 0);
-    const daysInMonth = lastDay.getDate();
-    const startingDay = firstDay.getDay(); 
-    
-    const blanks = Array(startingDay).fill(null);
-    const days = Array.from({length: daysInMonth}, (_, i) => i + 1);
-    
-    const dayMap = {};
     logs.forEach(log => {
       const logDate = safeDate(log.timestamp);
-      if (logDate.getFullYear() === year && logDate.getMonth() === month) {
-        const day = logDate.getDate();
-        if (!dayMap[day]) dayMap[day] = { hasSymptom: false, hasMed: false };
-        if (log.type === 'symptom') dayMap[day].hasSymptom = true;
-        if (log.type === 'medication') dayMap[day].hasMed = true;
-      }
+      logDate.setHours(0,0,0,0);
+      const diffTime = Math.abs(logDate - start);
+      const dayNum = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; 
+      
+      if (!grouped[dayNum]) grouped[dayNum] = [];
+      grouped[dayNum].push(log);
     });
-
-    return { blanks, days, dayMap };
-  }, [currentDate, logs]);
-
-  const partStats = useMemo(() => {
-    const counts = {};
-    logs.filter(l => l.type === 'symptom').forEach(l => {
-        counts[l.bodyPart] = (counts[l.bodyPart] || 0) + 1;
-    });
-    return Object.entries(counts).sort((a,b) => b[1] - a[1]).slice(0, 5);
-  }, [logs]);
-
-  const changeMonth = (offset) => {
-    const newDate = new Date(currentDate); 
-    newDate.setMonth(newDate.getMonth() + offset);
-    setCurrentDate(newDate);
-  };
+    
+    return Object.keys(grouped).sort((a,b) => b - a).map(day => ({
+      day,
+      logs: grouped[day].sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp))
+    }));
+  }, [logs, course.startDate]);
 
   return (
     <div className="space-y-6 animate-fade-in pb-10">
-      <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm p-6">
-        <div className="flex justify-between items-center mb-6">
-          <h3 className="font-bold text-slate-800 text-lg">
-            {currentDate.getFullYear()}年 {currentDate.getMonth() + 1}月
-          </h3>
-          <div className="flex gap-2">
-            <button onClick={() => changeMonth(-1)} className="p-2 hover:bg-slate-100 rounded-full transition-colors"><ChevronLeft className="w-5 h-5"/></button>
-            <button onClick={() => changeMonth(1)} className="p-2 hover:bg-slate-100 rounded-full transition-colors"><ChevronRight className="w-5 h-5"/></button>
-          </div>
+      <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm relative overflow-hidden">
+        <div className="flex justify-between items-start mb-6 relative z-10">
+           <div>
+             <h2 className="text-2xl font-bold text-slate-800">{course.name}</h2>
+             <span className={`inline-block mt-2 px-3 py-1 rounded-full text-xs font-bold ${isRecovered ? 'bg-green-100 text-green-600' : 'bg-indigo-100 text-indigo-600'}`}>
+               {isRecovered ? '已康复归档' : '正在进行治疗'}
+             </span>
+           </div>
+           {!isRecovered && (
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation(); 
+                  if(window.confirm('确认已康复并结束此病程？')) {
+                      onUpdateStatus(course.id, 'recovered');
+                  }
+                }}
+                className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-full text-sm font-bold shadow-lg shadow-green-200 transition-colors flex items-center gap-2"
+              >
+                <CheckCircle2 className="w-4 h-4" /> 标记康复
+              </button>
+           )}
         </div>
 
-        <div className="grid grid-cols-7 gap-2 text-center mb-2">
-           {['日','一','二','三','四','五','六'].map(d => (
-             <span key={d} className="text-xs font-medium text-slate-400">{d}</span>
-           ))}
-        </div>
-
-        <div className="grid grid-cols-7 gap-2">
-          {calendarData.blanks.map((_, i) => <div key={`blank-${i}`} className="h-10"></div>)}
-          {calendarData.days.map(day => {
-             const status = calendarData.dayMap[day];
-             let bgClass = "bg-slate-50";
-             let textClass = "text-slate-400";
-             let borderClass = "border-transparent";
-             
-             if (status) {
-               if (status.hasSymptom && status.hasMed) {
-                 bgClass = "bg-purple-100";
-                 textClass = "text-purple-700 font-bold";
-                 borderClass = "border-purple-200";
-               } else if (status.hasSymptom) {
-                 bgClass = "bg-rose-100";
-                 textClass = "text-rose-700 font-bold";
-                 borderClass = "border-rose-200";
-               } else if (status.hasMed) {
-                 bgClass = "bg-indigo-100";
-                 textClass = "text-indigo-700 font-bold";
-                 borderClass = "border-indigo-200";
-               }
-             }
-
-             return (
-               <div key={day} className={`h-10 rounded-xl flex items-center justify-center text-sm border ${bgClass} ${textClass} ${borderClass}`}>
-                 {day}
+        <div className="bg-slate-50 rounded-2xl p-5 space-y-4 border border-slate-100">
+           <div className="flex items-start gap-3">
+              <Clipboard className="w-4 h-4 text-slate-400 mt-1 shrink-0" />
+              <div>
+                 <span className="text-xs text-slate-400 block mb-1">症状综述</span>
+                 <p className="text-sm text-slate-700 leading-relaxed">{course.symptoms || '未填写'}</p>
+              </div>
+           </div>
+           
+           {course.hasDoctorVisit && (
+             <>
+               <div className="flex items-start gap-3 pt-4 border-t border-slate-200">
+                  <Stethoscope className="w-4 h-4 text-blue-500 mt-1 shrink-0" />
+                  <div className="flex-1">
+                     <span className="text-xs text-slate-400 block mb-1">就诊记录 ({course.department} {course.visitDate})</span>
+                     <p className="text-sm font-semibold text-slate-700">诊断：{course.diagnosis || '未填写'}</p>
+                     {course.prescription && (
+                       <div className="mt-3 bg-white p-3 rounded-xl border border-slate-200 text-xs text-slate-600 leading-relaxed">
+                         <span className="font-bold block mb-1 text-slate-700">处方/医嘱：</span>
+                         {course.prescription}
+                       </div>
+                     )}
+                  </div>
                </div>
-             );
-          })}
+             </>
+           )}
+        </div>
+        
+        <div className="grid grid-cols-2 gap-4 text-sm mt-4">
+           <div className="bg-slate-50 p-4 rounded-2xl">
+             <span className="text-slate-400 text-xs block mb-1">开始日期</span>
+             <span className="font-mono text-slate-700">{course.startDate}</span>
+           </div>
+           <div className="bg-slate-50 p-4 rounded-2xl">
+             <span className="text-slate-400 text-xs block mb-1">持续天数</span>
+             <span className="font-mono text-slate-700">
+               {isRecovered && course.endDate 
+                 ? Math.ceil((safeDate(course.endDate) - safeDate(course.startDate)) / (1000 * 60 * 60 * 24)) + 1 
+                 : getDaysSince(course.startDate)} 天
+             </span>
+           </div>
         </div>
       </div>
 
-      <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm p-6">
-        <h3 className="font-bold text-slate-800 mb-6 flex items-center gap-2">
-            <Activity className="w-5 h-5 text-rose-500" /> 高频不适部位
-        </h3>
-        <div className="space-y-4">
-          {partStats.length === 0 ? <p className="text-sm text-slate-400">暂无数据</p> : 
-           partStats.map(([part, count], index) => (
-             <div key={part} className="flex items-center gap-4">
-               <span className="text-xs font-mono text-slate-400 w-4">{index+1}</span>
-               <div className="flex-1">
-                 <div className="flex justify-between text-sm mb-2">
-                   <span className="font-medium text-slate-700">{part}</span>
-                   <span className="text-slate-500 font-medium">{count}次</span>
-                 </div>
-                 <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
-                   <div className="bg-rose-400 h-full rounded-full" style={{ width: `${Math.min(100, (count / partStats[0][1]) * 100)}%` }}></div>
-                 </div>
-               </div> 
-             </div>
-           ))}
+      <div>
+        <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4 px-2">病程时间轴</h3>
+        <div className="space-y-8 relative pl-4 border-l-2 border-slate-100 ml-4">
+          {timelineData.length === 0 ? (
+            <p className="text-slate-400 text-sm pl-4">暂无记录，请添加不适或用药记录。</p>
+          ) : (
+            timelineData.map(({ day, logs }) => (
+              <div key={day} className="relative pl-6">
+                <div className="absolute -left-[29px] top-0 p-1">
+                  <div className="bg-indigo-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
+                    Day {day}
+                  </div>
+                </div>
+                
+                <div className="space-y-3">
+                  {logs.map(log => <LogItem key={log.id} log={log} onDelete={onDeleteLog} simple />)}
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
     </div>
   );
 }
-
-
