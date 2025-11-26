@@ -2,7 +2,7 @@ import React from 'react';
 import { 
   Activity, Pill, Trash2, AlertTriangle, RefreshCw, Pencil
 } from 'lucide-react';
-import { formatDate, MEDICATION_METHODS } from './utils';
+import { formatDate, MEDICATION_METHODS } from './utils.jsx';
 
 // --- ErrorBoundary (防崩溃) ---
 export class ErrorBoundary extends React.Component {
