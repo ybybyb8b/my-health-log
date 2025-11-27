@@ -211,11 +211,11 @@ function HealthLogMain() {
   const handleWebDavSync = async () => { alert('网页版受浏览器限制，请使用导出功能备份。'); };
 
   return (
-    <div className="min-h-screen bg-gray-100/80 dark:bg-slate-950 text-slate-800 dark:text-slate-200 font-sans flex flex-col max-w-lg mx-auto shadow-2xl border-x border-slate-200 dark:border-slate-800 relative overflow-hidden">
+    <div className="min-h-screen bg-gray-100/80 dark:bg-ios-bg text-slate-800 dark:text-gray-200 font-sans flex flex-col max-w-lg mx-auto shadow-2xl border-x border-slate-200 dark:border-ios-border relative overflow-hidden">
       {/* 顶部栏 */}
-      <header className="px-6 pt-[calc(env(safe-area-inset-top)+1.5rem)] pb-4 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md sticky top-0 z-20 flex justify-between items-center border-b border-slate-50 dark:border-slate-800">
+      <header className="px-6 pt-[calc(env(safe-area-inset-top)+1.5rem)] pb-4 bg-white/80 dark:bg-ios-card/80 backdrop-blur-md sticky top-0 z-20 flex justify-between items-center border-b border-slate-50 dark:border-ios-border">
         {activeView === 'courseDetail' ? (
-           <button onClick={() => setActiveView('dashboard')} className="flex items-center gap-1 text-slate-500 hover:text-black dark:text-slate-400 dark:hover:text-white transition-colors font-medium">
+           <button onClick={() => setActiveView('dashboard')} className="flex items-center gap-1 text-slate-500 hover:text-black dark:text-gray-400 dark:hover:text-white transition-colors font-medium">
              <ChevronLeft className="w-5 h-5" /> 返回
            </button>
         ) : (
@@ -259,14 +259,14 @@ function HealthLogMain() {
             
             {/* 1. 统计概览 */}
             <div className="grid grid-cols-2 gap-4">
-               <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm flex items-center gap-3">
+               <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-100 dark:border-ios-border shadow-sm flex items-center gap-3">
                   <div className="p-2.5 bg-rose-50 dark:bg-rose-900/20 text-rose-500 dark:text-rose-400 rounded-xl"><Activity className="w-5 h-5"/></div>
                   <div>
-                    <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase block">累计不适</span>
+                    <span className="text-[10px] font-bold text-slate-400 dark:text-gray-500 uppercase block">累计不适</span>
                     <span className="text-xl font-bold text-slate-800 dark:text-white tracking-tight">{stats.symptomCount}</span>
                   </div>
                </div>
-               <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm flex items-center gap-3">
+               <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-100 dark:border-ios-border shadow-sm flex items-center gap-3">
                   <div className="p-2.5 bg-blue-50 dark:bg-blue-900/20 text-blue-500 dark:text-blue-400 rounded-xl"><Pill className="w-5 h-5"/></div>
                   <div>
                     <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase block">累计用药</span>
@@ -336,25 +336,25 @@ function HealthLogMain() {
                 </span>
               </div>
               
-              <div className="relative pl-4 border-l-2 border-slate-100 dark:border-slate-800 space-y-6 ml-2">
+              <div className="relative pl-4 border-l-2 border-slate-100 dark:border-ios-border space-y-6 ml-2">
                 {todayLogs.length === 0 ? (
                     <div className="pl-4 py-2">
-                        <p className="text-sm text-slate-400 dark:text-slate-500 italic">今天还没有记录，身体感觉如何？</p>
+                        <p className="text-sm text-slate-400 dark:text-gray-500 italic">今天还没有记录，身体感觉如何？</p>
                         <button onClick={() => { setModalType('symptom'); setIsModalOpen(true); setEditingLog(null); }} className="mt-2 text-xs text-indigo-600 font-bold hover:underline">记一笔</button>
                     </div>
                 ) : (
                     todayLogs.map(log => (
                         <div key={log.id} className="relative pl-6">
-                            <div className="absolute -left-[21px] top-1.5 w-3 h-3 bg-white dark:bg-slate-950 border-2 border-indigo-500 rounded-full z-10"></div>
+                            <div className="absolute -left-[21px] top-1.5 w-3 h-3 bg-white dark:bg-ios-bg border-2 border-indigo-500 rounded-full z-10"></div>
                             <div className="flex items-start justify-between group">
                                 <div>
                                     <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400 font-mono mb-0.5 block">
                                         {formatTimeOnly(log.timestamp)}
                                     </span>
-                                    <h4 className="text-sm font-bold text-slate-700 dark:text-slate-200">
+                                    <h4 className="text-sm font-bold text-slate-700 dark:text-gray-200">
                                         {log.type === 'symptom' ? log.bodyPart : log.name}
                                     </h4>
-                                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                                    <p className="text-xs text-slate-500 dark:text-gray-400 mt-0.5">
                                         {log.type === 'symptom' 
                                             ? `${log.severity}级 · ${log.note || ''}` 
                                             : `${log.dosage} · ${log.method === 'other' ? log.methodLabel : MEDICATION_METHODS.find(m => m.id === log.method)?.label}`
