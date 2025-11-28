@@ -211,26 +211,26 @@ function HealthLogMain() {
   const handleWebDavSync = async () => { alert('网页版受浏览器限制，请使用导出功能备份。'); };
 
   return (
-    <div className="min-h-screen bg-gray-100/80 dark:bg-ios-bg text-slate-800 dark:text-gray-200 font-sans flex flex-col max-w-lg mx-auto shadow-2xl border-x border-slate-200 dark:border-ios-border relative overflow-hidden">
+    <div className="min-h-screen bg-gray-100/80 dark:bg-ios-bg text-zinc-800 dark:text-gray-200 font-sans flex flex-col max-w-lg mx-auto shadow-2xl border-x border-zinc-200 dark:border-ios-border relative overflow-hidden">
       {/* 顶部栏 */}
-      <header className="px-6 pt-[calc(env(safe-area-inset-top)+1.5rem)] pb-4 bg-white/80 dark:bg-ios-card/80 backdrop-blur-md sticky top-0 z-20 flex justify-between items-center border-b border-slate-50 dark:border-ios-border">
+      <header className="px-6 pt-[calc(env(safe-area-inset-top)+1.5rem)] pb-4 bg-white/80 dark:bg-ios-card/80 backdrop-blur-md sticky top-0 z-20 flex justify-between items-center border-b border-zinc-50 dark:border-ios-border">
         {activeView === 'courseDetail' ? (
-           <button onClick={() => setActiveView('dashboard')} className="flex items-center gap-1 text-slate-500 hover:text-black dark:text-gray-400 dark:hover:text-white transition-colors font-medium">
+           <button onClick={() => setActiveView('dashboard')} className="flex items-center gap-1 text-zinc-500 hover:text-black dark:text-gray-400 dark:hover:text-white transition-colors font-medium">
              <ChevronLeft className="w-5 h-5" /> 返回
            </button>
         ) : (
           <div>
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
+            <h1 className="text-2xl font-bold text-zinc-900 dark:text-white tracking-tight flex items-center gap-2">
               <Activity className="w-6 h-6 text-indigo-600 dark:text-indigo-400"/> 健康日志
             </h1>
           </div>
         )}
         
         <div className="flex items-center gap-2">
-          <button onClick={handleGlobalSearch} className="p-2.5 rounded-full text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 active:bg-slate-100 dark:active:bg-slate-700 transition-all">
+          <button onClick={handleGlobalSearch} className="p-2.5 rounded-full text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800 active:bg-zinc-100 dark:active:bg-zinc-700 transition-all">
             <Search className="w-6 h-6" strokeWidth={2} />
           </button>
-          <button onClick={() => setActiveView(activeView === 'settings' ? 'dashboard' : 'settings')} className={`p-2.5 rounded-full transition-all active:scale-95 ${activeView === 'settings' ? 'bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-white' : 'text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`}>
+          <button onClick={() => setActiveView(activeView === 'settings' ? 'dashboard' : 'settings')} className={`p-2.5 rounded-full transition-all active:scale-95 ${activeView === 'settings' ? 'bg-zinc-100 text-zinc-900 dark:bg-zinc-800 dark:text-white' : 'text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800'}`}>
             <Settings className="w-6 h-6" strokeWidth={2} />
           </button>
         </div>
@@ -259,18 +259,18 @@ function HealthLogMain() {
             
             {/* 1. 统计概览 */}
             <div className="grid grid-cols-2 gap-4">
-               <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-100 dark:border-ios-border shadow-sm flex items-center gap-3">
+               <div className="bg-white dark:bg-zinc-900 p-4 rounded-2xl border border-zinc-100 dark:border-ios-border shadow-sm flex items-center gap-3">
                   <div className="p-2.5 bg-rose-50 dark:bg-rose-900/20 text-rose-500 dark:text-rose-400 rounded-xl"><Activity className="w-5 h-5"/></div>
                   <div>
-                    <span className="text-[10px] font-bold text-slate-400 dark:text-gray-500 uppercase block">累计不适</span>
-                    <span className="text-xl font-bold text-slate-800 dark:text-white tracking-tight">{stats.symptomCount}</span>
+                    <span className="text-[10px] font-bold text-zinc-400 dark:text-gray-500 uppercase block">累计不适</span>
+                    <span className="text-xl font-bold text-zinc-800 dark:text-white tracking-tight">{stats.symptomCount}</span>
                   </div>
                </div>
-               <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-100 dark:border-ios-border shadow-sm flex items-center gap-3">
+               <div className="bg-white dark:bg-zinc-900 p-4 rounded-2xl border border-zinc-100 dark:border-ios-border shadow-sm flex items-center gap-3">
                   <div className="p-2.5 bg-blue-50 dark:bg-blue-900/20 text-blue-500 dark:text-blue-400 rounded-xl"><Pill className="w-5 h-5"/></div>
                   <div>
-                    <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase block">累计用药</span>
-                    <span className="text-xl font-bold text-slate-800 dark:text-white tracking-tight">{stats.medCount}</span>
+                    <span className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase block">累计用药</span>
+                    <span className="text-xl font-bold text-zinc-800 dark:text-white tracking-tight">{stats.medCount}</span>
                   </div>
                </div>
             </div>
@@ -279,11 +279,11 @@ function HealthLogMain() {
             <div>
                <div className="flex justify-between items-center mb-3 px-1">
                  <div className="flex items-center gap-2">
-                    <h3 className="text-sm font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">进行中病程</h3>
+                    <h3 className="text-sm font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">进行中病程</h3>
                     {activeCourses.length > 1 && (
                       <button 
                         onClick={() => setCourseSortOrder(prev => prev === 'desc' ? 'asc' : 'desc')}
-                        className="p-1 rounded-md hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-400 transition-colors"
+                        className="p-1 rounded-md hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-400 transition-colors"
                         title="切换排序"
                       >
                         <ArrowUpDown className="w-3.5 h-3.5" />
@@ -320,9 +320,9 @@ function HealthLogMain() {
                    ))}
                  </div>
                ) : (
-                 <div onClick={() => { setModalType('newCourse'); setIsModalOpen(true); setEditingLog(null); }} className="bg-white dark:bg-slate-900 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-3xl p-6 text-center cursor-pointer group">
-                    <div className="w-12 h-12 bg-slate-50 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-3 text-slate-400 dark:text-slate-500"><BookOpen className="w-6 h-6" /></div>
-                    <p className="text-sm text-slate-500 dark:text-slate-400">当前无进行中病程</p>
+                 <div onClick={() => { setModalType('newCourse'); setIsModalOpen(true); setEditingLog(null); }} className="bg-white dark:bg-zinc-900 border-2 border-dashed border-zinc-200 dark:border-zinc-700 rounded-3xl p-6 text-center cursor-pointer group">
+                    <div className="w-12 h-12 bg-zinc-50 dark:bg-zinc-800 rounded-full flex items-center justify-center mx-auto mb-3 text-zinc-400 dark:text-zinc-500"><BookOpen className="w-6 h-6" /></div>
+                    <p className="text-sm text-zinc-500 dark:text-zinc-400">当前无进行中病程</p>
                  </div>
                )}
             </div>
@@ -330,16 +330,16 @@ function HealthLogMain() {
             {/* 3. 今日时间轴 */}
             <div>
               <div className="flex items-center gap-2 mb-4 px-1">
-                <h3 className="text-sm font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">今日概览</h3>
-                <span className="bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 text-[10px] px-2 py-0.5 rounded-full font-mono">
+                <h3 className="text-sm font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">今日概览</h3>
+                <span className="bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 text-[10px] px-2 py-0.5 rounded-full font-mono">
                   {new Date().toLocaleDateString()}
                 </span>
               </div>
               
-              <div className="relative pl-4 border-l-2 border-slate-100 dark:border-ios-border space-y-6 ml-2">
+              <div className="relative pl-4 border-l-2 border-zinc-100 dark:border-ios-border space-y-6 ml-2">
                 {todayLogs.length === 0 ? (
                     <div className="pl-4 py-2">
-                        <p className="text-sm text-slate-400 dark:text-gray-500 italic">今天还没有记录，身体感觉如何？</p>
+                        <p className="text-sm text-zinc-400 dark:text-gray-500 italic">今天还没有记录，身体感觉如何？</p>
                         <button onClick={() => { setModalType('symptom'); setIsModalOpen(true); setEditingLog(null); }} className="mt-2 text-xs text-indigo-600 font-bold hover:underline">记一笔</button>
                     </div>
                 ) : (
@@ -351,10 +351,10 @@ function HealthLogMain() {
                                     <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400 font-mono mb-0.5 block">
                                         {formatTimeOnly(log.timestamp)}
                                     </span>
-                                    <h4 className="text-sm font-bold text-slate-700 dark:text-gray-200">
+                                    <h4 className="text-sm font-bold text-zinc-700 dark:text-gray-200">
                                         {log.type === 'symptom' ? log.bodyPart : log.name}
                                     </h4>
-                                    <p className="text-xs text-slate-500 dark:text-gray-400 mt-0.5">
+                                    <p className="text-xs text-zinc-500 dark:text-gray-400 mt-0.5">
                                         {log.type === 'symptom' 
                                             ? `${log.severity}级 · ${log.note || ''}` 
                                             : `${log.dosage} · ${log.method === 'other' ? log.methodLabel : MEDICATION_METHODS.find(m => m.id === log.method)?.label}`
@@ -362,10 +362,10 @@ function HealthLogMain() {
                                     </p>
                                 </div>
                                 <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                  <button onClick={() => handleEditLog(log)} className="p-1.5 text-slate-300 hover:text-blue-500 transition-colors">
+                                  <button onClick={() => handleEditLog(log)} className="p-1.5 text-zinc-300 hover:text-blue-500 transition-colors">
                                       <Pencil className="w-4 h-4" />
                                   </button>
-                                  <button onClick={() => handleDeleteLog(log.id)} className="p-1.5 text-slate-300 hover:text-red-500 transition-colors">
+                                  <button onClick={() => handleDeleteLog(log.id)} className="p-1.5 text-zinc-300 hover:text-red-500 transition-colors">
                                       <Trash2 className="w-4 h-4" />
                                   </button>
                                 </div>
@@ -398,7 +398,7 @@ function HealthLogMain() {
          </div>
 
          <div className="relative pointer-events-auto flex flex-col items-center">
-            <div className={`absolute bottom-0 w-full flex flex-col items-end gap-3 mb-[5.5rem] transition-all duration-300 ${isFabOpen ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10 pointer-events-none'}`}>
+            <div className={`absolute bottom-0 w-full flex flex-col items-end gap-3 mb-[5.5rem] transition-all duration-300 ${isFabOpen ? 'opacity-100 tranzinc-y-0' : 'opacity-0 tranzinc-y-10 pointer-events-none'}`}>
                <button onClick={() => { setModalType('symptom'); setIsModalOpen(true); setEditingLog(null); }} className="flex items-center gap-3 group">
                  <span className="bg-white/90 dark:bg-[#1c1c1e]/90 backdrop-blur text-gray-800 dark:text-white text-xs font-bold px-3 py-1.5 rounded-xl shadow-sm whitespace-nowrap border border-gray-200 dark:border-white/10">记不适</span>
                  <div className="w-12 h-12 bg-rose-500 text-white rounded-full shadow-lg flex items-center justify-center transition-transform active:scale-95 border-2 border-[#f0f0f0] dark:border-[#2c2c2e]"><Activity className="w-5 h-5" /></div>
