@@ -1,8 +1,8 @@
+/* src/index.css */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* 隐藏滚动条但保留滚动功能 */
 .scrollbar-hide::-webkit-scrollbar {
     display: none;
 }
@@ -12,6 +12,7 @@
 }
 
 body {
-  background-color: #f8fafc;
-  overscroll-behavior-y: none; /* 防止下拉刷新干扰 */
+  /* 亮色时用 zinc-50，深色时用纯黑 */
+  @apply bg-zinc-50 text-zinc-900 dark:bg-black dark:text-ios-text;
+  overscroll-behavior-y: none;
 }
