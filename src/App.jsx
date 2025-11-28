@@ -211,26 +211,25 @@ function HealthLogMain() {
   const handleWebDavSync = async () => { alert('网页版受浏览器限制，请使用导出功能备份。'); };
 
   return (
-    <div className="min-h-screen bg-gray-100/80 dark:bg-ios-bg text-zinc-800 dark:text-gray-200 font-sans flex flex-col max-w-lg mx-auto shadow-2xl border-x border-zinc-200 dark:border-ios-border relative overflow-hidden">
-      {/* 顶部栏 */}
-      <header className="px-6 pt-[calc(env(safe-area-inset-top)+1.5rem)] pb-4 bg-white/80 dark:bg-ios-card/80 backdrop-blur-md sticky top-0 z-20 flex justify-between items-center border-b border-zinc-50 dark:border-ios-border">
-        {activeView === 'courseDetail' ? (
-           <button onClick={() => setActiveView('dashboard')} className="flex items-center gap-1 text-zinc-500 hover:text-black dark:text-gray-400 dark:hover:text-white transition-colors font-medium">
-             <ChevronLeft className="w-5 h-5" /> 返回
-           </button>
-        ) : (
-          <div>
-            <h1 className="text-2xl font-bold text-zinc-900 dark:text-white tracking-tight flex items-center gap-2">
-              <Activity className="w-6 h-6 text-indigo-600 dark:text-indigo-400"/> 健康日志
-            </h1>
-          </div>
-        )}
+    // 1. 背景色修正: bg-ios-bg (纯黑)
+    <div className="min-h-screen bg-zinc-50 dark:bg-black text-zinc-900 dark:text-ios-text font-sans flex flex-col max-w-lg mx-auto shadow-2xl border-x border-zinc-200 dark:border-white/5 relative overflow-hidden transition-colors duration-300">
+      
+      {/* 2. 顶部栏: 增加半透明模糊感，修正边框颜色 */}
+      <header className="px-6 pt-[calc(env(safe-area-inset-top)+1.5rem)] pb-4 bg-white/80 dark:bg-black/80 backdrop-blur-xl sticky top-0 z-20 flex justify-between items-center border-b border-zinc-100 dark:border-white/5">
+        {/* ... return 按钮 ... */}
         
+        {/* 标题颜色 */}
+        <h1 className="text-2xl font-bold text-zinc-900 dark:text-white tracking-tight flex items-center gap-2">
+           {/* 图标颜色优化 */}
+           <Activity className="w-6 h-6 text-indigo-600 dark:text-indigo-400"/> 健康日志
+        </h1>
+        
+        {/* 顶部按钮背景优化 */}
         <div className="flex items-center gap-2">
-          <button onClick={handleGlobalSearch} className="p-2.5 rounded-full text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800 active:bg-zinc-100 dark:active:bg-zinc-700 transition-all">
+          <button onClick={handleGlobalSearch} className="p-2.5 rounded-full text-zinc-400 hover:bg-zinc-100 dark:hover:bg-white/10 active:scale-95 transition-all">
             <Search className="w-6 h-6" strokeWidth={2} />
           </button>
-          <button onClick={() => setActiveView(activeView === 'settings' ? 'dashboard' : 'settings')} className={`p-2.5 rounded-full transition-all active:scale-95 ${activeView === 'settings' ? 'bg-zinc-100 text-zinc-900 dark:bg-zinc-800 dark:text-white' : 'text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800'}`}>
+          <button onClick={() => setActiveView(activeView === 'settings' ? 'dashboard' : 'settings')} className={`p-2.5 rounded-full transition-all active:scale-95 ${activeView === 'settings' ? 'bg-zinc-100 text-zinc-900 dark:bg-white/20 dark:text-white' : 'text-zinc-400 hover:bg-zinc-100 dark:hover:bg-white/10'}`}>
             <Settings className="w-6 h-6" strokeWidth={2} />
           </button>
         </div>
